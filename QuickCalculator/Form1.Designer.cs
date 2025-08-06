@@ -33,20 +33,23 @@
             // 
             // inputTextBox
             // 
-            inputTextBox.Location = new Point(12, 12);
+            inputTextBox.Location = new Point(22, 26);
+            inputTextBox.Margin = new Padding(6, 6, 6, 6);
             inputTextBox.Name = "inputTextBox";
-            inputTextBox.Size = new Size(377, 28);
+            inputTextBox.Size = new Size(697, 55);
             inputTextBox.TabIndex = 1;
             inputTextBox.Text = "";
+            inputTextBox.TextChanged += inputTextBox_TextChanged;
             inputTextBox.KeyDown += inputTextBox_KeyDown;
             // 
             // Form1
             // 
-            AutoScaleDimensions = new SizeF(7F, 15F);
+            AutoScaleDimensions = new SizeF(13F, 32F);
             AutoScaleMode = AutoScaleMode.Font;
             BackColor = Color.DarkGray;
-            ClientSize = new Size(401, 52);
+            ClientSize = new Size(745, 111);
             Controls.Add(inputTextBox);
+            Margin = new Padding(6, 6, 6, 6);
             Name = "Form1";
             Text = "Form1";
             ResumeLayout(false);

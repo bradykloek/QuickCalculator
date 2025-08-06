@@ -12,9 +12,14 @@ namespace QuickCalculator
             if (e.KeyCode == Keys.Enter)
             {
                 e.SuppressKeyPress = true;
-                LinkedList tokens = Tokenizer.Tokenize(inputTextBox.Text);
-                System.Windows.Forms.MessageBox.Show(tokens.ToString());
+                Token[] tokens = Tokenizer.Tokenize(inputTextBox.Text);
+                System.Windows.Forms.MessageBox.Show(string.Join(" ", (object[])tokens));
             }
+        }
+
+        private void inputTextBox_TextChanged(object sender, EventArgs e)
+        {
+
         }
     }
 }

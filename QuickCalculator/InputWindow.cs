@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Drawing;
 using System.Windows.Forms;
+using System.Text;
 
 namespace QuickCalculator
 {
@@ -28,22 +29,36 @@ namespace QuickCalculator
             {
                 e.SuppressKeyPress = true;
 
-                // We want to throw any exceptions after the user hits Enter
-                TokenCollection tokenCollection = Tokenizer.Tokenize(inputTextBox.Text, true);
-                System.Windows.Forms.MessageBox.Show(string.Join(" ", (object[])tokenCollection.GetTokens()));
+                TokenCollection tokenCollection = Tokenizer.Tokenize(inputTextBox.Text, false);
+                if(tokenCollection.GetExceptions().Count() == 0)
+                {
+                    System.Windows.Forms.MessageBox.Show(string.Join(" ", (object[])tokenCollection.GetTokens()));
+
+                }
+                else
+                {
+                    System.Windows.Forms.MessageBox.Show(buildErrorMessage(tokenCollection));
+
+                }
+
             }
         }
 
         private void inputTextBox_TextChanged(object sender, EventArgs e)
         {
-            // Don't throw exceptions because the user is currently typing
             TokenCollection tokenCollection = Tokenizer.Tokenize(inputTextBox.Text, false);
-            bool[] errorIndices = tokenCollection.GetErrors();
 
-            colorErrors(tokenCollection);
             colorTokens(tokenCollection);
+            colorErrors(tokenCollection);
         }
 
+        /// <summary>
+        /// Colors select substrings of the input box text.
+        /// </summary>
+        /// <param name="start"></param> Start index that should be colored
+        /// <param name="length"></param> Number of characters that should be colored
+        /// <param name="color"></param> Color that the text should be changed to
+        /// <param name="style"></param> Font Style that should be applied
         private void colorText(int start, int length, Color color, FontStyle style)
         {   // Save user's selection
             int selectionStart = inputTextBox.SelectionStart;
@@ -57,19 +72,23 @@ namespace QuickCalculator
             inputTextBox.SelectionLength = selectionLength;
         }
 
+        /// <summary>
+        /// Colors all characters that caused Tokenizer Errors to red with an underline
+        /// </summary>
+        /// <param name="tokenCollection"></param> Collection of tokens that is parsed
         private void colorErrors(TokenCollection tokenCollection)
         {
-            bool[] errorIndices = tokenCollection.GetErrors();
-            for (int i = 0; i < errorIndices.Length; i++)
+            List<TokenizerException> tokenizerExceptions = tokenCollection.GetExceptions();
+            for (int i = 0; i < tokenizerExceptions.Count(); i++)
             {
-                if (errorIndices[i]) // If index i caused an error
-                {
-                    colorText(i, 1, Color.Red, FontStyle.Underline);
-                    Debug.WriteLine(i.ToString());
-                }
+                colorText(tokenizerExceptions[i].GetCharIndex(), 1, Color.Red, FontStyle.Underline);
             }
         }
 
+        /// <summary>
+        /// Colors characters in the input text box to colors that indicate their token category
+        /// </summary>
+        /// <param name="tokenCollection"></param> Collection of tokens that is parsed
         private void colorTokens(TokenCollection tokenCollection)
         {
             Token[] tokens = tokenCollection.GetTokens();
@@ -97,7 +116,19 @@ namespace QuickCalculator
                 }
             }
         }
-
+        
+        private string buildErrorMessage(TokenCollection tokenCollection)
+        {
+            StringBuilder sb = new StringBuilder();
+            List<TokenizerException> tokenizerExceptions = tokenCollection.GetExceptions();
+            sb.Append("Tokenizer encountered " + tokenizerExceptions.Count() + " errors:\n");
+            for(int i = 0; i < tokenizerExceptions.Count(); i++)
+            {
+                sb.Append(" " + (i+1) + ":   " + tokenizerExceptions[i].ToString() + "\n");
+            }
+            return sb.ToString();
+        }
+        
         private void inputTextBox_KeyPress(object sender, KeyPressEventArgs e)
         {
 

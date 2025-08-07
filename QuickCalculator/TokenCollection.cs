@@ -15,20 +15,18 @@ namespace QuickCalculator
 
 
         private Token[] tokens;         // Holds all of the Tokens that are created
-        private bool[] errorIndices;    // Booleans represent whether each individual character at each index caused an error
+        private List<TokenizerException> tokenizerExceptions;    // List that stores all exceptions that were encountered
         private int tokenCount = 0;     // Stores how many tokens are in the tokens array
 
         public TokenCollection(int charCount)
         {
             tokenCount = 0;
             tokens = new Token[charCount+1];
-            errorIndices = new bool[charCount+1];
+            tokenizerExceptions = new List<TokenizerException>();
 
-            /* Though these are of the same size, they are NOT parallel arrays. 
-             *   - tokens has one element per token. This has an UPPER BOUND of charCount, and due to these arrays being used
+            /*   tokens has one element per token. This has an UPPER BOUND of charCount, and due to these arrays being used
              *   only once then discarded, the empty space is negligible. It is more efficient to avoid using a dynamic array that
              *   has to perform any resize operations
-             *   - errorIndices is meant to be exactly of length charCount, as each boolean corresponds to the character in its index
              */
         }
 
@@ -43,14 +41,9 @@ namespace QuickCalculator
             tokenCount++;
         }
 
-        public void ModifyError(int index, bool newStatus)
+        public void TokenizerError(TokenizerException exception)
         {
-            if(index < 0 || index >= errorIndices.Length)
-            {
-                throw new IndexOutOfRangeException("Cannot modify errorIndices. Tokenizer out of bounds.");
-            }
-
-            errorIndices[index] = newStatus;
+            tokenizerExceptions.Add(exception);
         }
 
         public Token[] GetTokens()
@@ -58,15 +51,14 @@ namespace QuickCalculator
             return tokens;
         }
 
-        public bool[] GetErrors()
+        public List<TokenizerException> GetExceptions()
         {
-            return errorIndices;
+            return tokenizerExceptions;
         }
 
         public int GetTokenCount()
         {
             return tokenCount;
         }
-
     }
 }

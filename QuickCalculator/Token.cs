@@ -14,6 +14,7 @@ namespace QuickCalculator
                                     *      n = Number
                                     *      o = Operator
                                     */
+
         private int inputStart, inputEnd; // Store the indexes of the input string that comprise this token. [start, end)
 
         public Token(string token, char category, int start, int end)

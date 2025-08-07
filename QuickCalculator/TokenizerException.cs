@@ -17,9 +17,14 @@ namespace QuickCalculator
             this.charIndex = charIndex;
         }
 
-        public int CharIndex()
+        public int GetCharIndex()
         {
             return charIndex;
+        }
+
+        public override string ToString()
+        {
+            return "[" + charIndex+ "] " + base.Message;
         }
 
     }

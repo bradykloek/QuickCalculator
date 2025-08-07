@@ -9,9 +9,12 @@ namespace QuickCalculator
     internal class Tokenizer
     {
 
-        /* Tokenize
-         * Converts an input string into a Token array
-         */
+        /// <summary>
+        /// Converts an input string into a TokenCollection that stores Tokens
+        /// </summary>
+        /// <param name="input"></param> Input string
+        /// <param name="throwExceptions"></param> Boolean indicating whether exceptions should be thrown. 
+        /// <returns></returns>
         public static TokenCollection Tokenize(string input, bool throwExceptions)
         {
 
@@ -25,13 +28,15 @@ namespace QuickCalculator
                 return tokenCollection;
             }
 
-            char category = '\0';  // \0 is a placeholder character to indicate a category hasn't been determined yet
-            string token = "";
-            char current;
+
             bool hasDecimal = false;
             bool hasAssignment = false;
             int parenLevel = 0;
             int inputStart = 0;
+
+            char category = '\0';  // \0 is a placeholder character to indicate a category hasn't been determined yet
+            string token = "";
+            char current;
             for (int i = 0; i < input.Length; i++)
             {
                 current = input[i];
@@ -41,7 +46,8 @@ namespace QuickCalculator
                 }
                 else if (!(Char.IsLetter(current) || Char.IsDigit(current) || validSymbols.Contains(current) || operators.Contains(current)))
                 { // Only letters, digits, and select symbols are valid
-                    tokenError("Invalid character '" + current + "' at index "+i + ", unable to tokenize.",i, throwExceptions, tokenCollection);
+                    TokenizerError("Invalid character '" + current + "'.",i, throwExceptions, tokenCollection);
+                    continue;
                 }
 
                 switch (category)
@@ -75,7 +81,7 @@ namespace QuickCalculator
                             {
                                 if (hasAssignment)
                                 {
-                                    tokenError("Expression cannot contain more than one assignment operator", i, throwExceptions, tokenCollection);
+                                    TokenizerError("Expression contains multiple assignment operators '='.", i, throwExceptions, tokenCollection);
                                 }
                                 hasAssignment = true;
                             }
@@ -89,7 +95,7 @@ namespace QuickCalculator
                             {
                                 if(parenLevel == 0)
                                 {
-                                    tokenError("Unopened closing parentheses at index " + i + ", unable to tokenize.", i, throwExceptions, tokenCollection);
+                                    TokenizerError("Unopened closing parentheses.", i, throwExceptions, tokenCollection);
                                 }
                                 else
                                 {
@@ -104,7 +110,7 @@ namespace QuickCalculator
                         else
                         {
                             // Any other character is invalid for the start of a token
-                            tokenError("Invalid character '" + current + "' for start of token at index " + i + ", unable to tokenize.", i, throwExceptions, tokenCollection);
+                            TokenizerError("Invalid character '" + current + "' for start of token.", i, throwExceptions, tokenCollection);
                         }
                             break;
                     case 's':
@@ -132,7 +138,7 @@ namespace QuickCalculator
                         else if (current == '.')
                         {
                             if (hasDecimal) {
-                                tokenError("Input cannot have multiple decimals, unable to tokenize.", i, throwExceptions, tokenCollection);
+                                TokenizerError("Number contains multiple decimal points.", i, throwExceptions, tokenCollection);
                             }
                             else {
                                 hasDecimal = true;
@@ -159,15 +165,26 @@ namespace QuickCalculator
             return tokenCollection;
         }
 
-        private static void tokenError(string message, int charIndex, bool throwException, TokenCollection tokenCollection)
+        /// <summary>
+        /// TokenizerError handles any input that aren't valid for tokenization. It either throws an error or stores the 
+        /// index that caused the error in errorIndices, depending on how the Tokinize() call is being used.
+        /// </summary>
+        /// <param name="message"></param> Error Message
+        /// <param name="charIndex"></param> Index that caused the error
+        /// <param name="throwException"></param> Boolean indicated whether an exceptions should be thrown or not
+        /// <param name="tokenCollection"></param> TokenCollection object that will store the error indices if !throwException
+        /// <exception cref="TokenizerException"></exception>
+        private static void TokenizerError(string message, int charIndex, bool throwException, TokenCollection tokenCollection)
         {
+            TokenizerException exception = new TokenizerException(message, charIndex);
+
             if (throwException)
             {
-                throw new TokenizerException(message, charIndex);
+                throw exception;
             }
             else
             {
-                tokenCollection.ModifyError(charIndex, true);
+                tokenCollection.TokenizerError(exception);  // Adds this exception to the list kept within tokenCollection
             }
         }
     }

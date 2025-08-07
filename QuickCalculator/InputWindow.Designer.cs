@@ -1,6 +1,6 @@
 ﻿namespace QuickCalculator
 {
-    partial class Form1
+    partial class InputWindow
     {
         /// <summary>
         ///  Required designer variable.
@@ -33,8 +33,11 @@
             // 
             // inputTextBox
             // 
+            inputTextBox.BackColor = Color.FromArgb(64, 64, 64);
+            inputTextBox.Font = new Font("Consolas", 12F);
+            inputTextBox.ForeColor = Color.White;
             inputTextBox.Location = new Point(22, 26);
-            inputTextBox.Margin = new Padding(6, 6, 6, 6);
+            inputTextBox.Margin = new Padding(6);
             inputTextBox.Name = "inputTextBox";
             inputTextBox.Size = new Size(697, 55);
             inputTextBox.TabIndex = 1;
@@ -49,9 +52,9 @@
             BackColor = Color.DarkGray;
             ClientSize = new Size(745, 111);
             Controls.Add(inputTextBox);
-            Margin = new Padding(6, 6, 6, 6);
-            Name = "Form1";
-            Text = "Form1";
+            Margin = new Padding(6);
+            Name = "InputWindow";
+            Text = "InputWindow";
             ResumeLayout(false);
         }
 

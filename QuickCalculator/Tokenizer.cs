@@ -8,22 +8,29 @@ namespace QuickCalculator
 {
     internal class Tokenizer
     {
-        public static Token[] Tokenize(string input)
+
+        /* Tokenize
+         * Converts an input string into a Token array
+         */
+        public static TokenCollection Tokenize(string input, bool throwExceptions)
         {
-            char[] operators = { '+', '-', '*', '/', '^', '%', '!' };
-            char[] validSymbols = { '.', ',', '(', ')' };
 
-            Token[] tokens = new Token[input.Length];
-            int currentIndex = 0;
-            /*  Creates an array of the size of the input. There will usually be fewer tokens than characters,
-             *  so there will be some space inefficiency. However, each tokens array is only used once then garbage collected
-             *  so this is negligible. It is more space efficient than a linked list and avoids the resizing of a dynamic array.
-             */
+            char[] operators = { '+', '-', '*', '/', '^', '%', '!', '=' };
+            char[] validSymbols = { '.', ',', '(', ')'};
 
-            char type = '\0';  // \0 is a placeholder character to indicate a type hasn't been determined yet
+            TokenCollection tokenCollection = new TokenCollection(input.Length);
+
+            if (input.Length == 0)
+            {
+                return tokenCollection;
+            }
+
+            char category = '\0';  // \0 is a placeholder character to indicate a category hasn't been determined yet
             string token = "";
             char current;
             bool hasDecimal = false;
+            bool hasAssignment = false;
+            int parenLevel = 0;
             for (int i = 0; i < input.Length; i++)
             {
                 current = input[i];
@@ -33,47 +40,66 @@ namespace QuickCalculator
                 }
                 else if (!(Char.IsLetter(current) || Char.IsDigit(current) || validSymbols.Contains(current) || operators.Contains(current)))
                 { // Only letters, digits, and select symbols are valid
-                    throw new TokenizerException("Invalid character '" + current + "' at index "+i + ", unable to tokenize.",i);
+                    tokenError("Invalid character '" + current + "' at index "+i + ", unable to tokenize.",i, throwExceptions, tokenCollection);
                 }
 
-                switch (type)
+                switch (category)
                 {
-                    case '\0': // If a type hasn't yet been determined, we need to start with 
+                    case '\0': // If a category hasn't yet been determined, we need to start with 
                         token += current;
 
                         // If the token starts with a letter, then it is a Variable or Function, collectively called a Symbol
                         if (Char.IsLetter(current))
                         {
-                            type = 's'; // s indicates Symbol
+                            category = 's'; // s indicates Symbol
                             continue;
                         }
 
                         // If the token starts with a digit or a decimal, then it is a Number of an unknown amount of digits
                         else if (Char.IsDigit(current) || current == '.')
                         {
-                            type = 'n'; // n indicates Number
+                            category = 'n'; // n indicates Number
                             hasDecimal = current == '.';
                             continue;
                         }
 
                         else if (operators.Contains(current))
                         {
-                            type = 'o'; // o indicates Operator
+                            category = 'o'; // o indicates Operator
                             /*  Since operators can only be one character long, the token node can immediately without more looping,
                                 so we will immediately break out of the switch */
+
+                            if(current == '=')
+                            {
+                                if (hasAssignment)
+                                {
+                                    tokenError("Expression cannot contain more than one assignment operator", i, throwExceptions, tokenCollection);
+                                }
+                                hasAssignment = true;
+                            }
                         }
-                        else if (current == '(')
+                        else  if (current == '(')
                         {
-                            type = '(';
+                            category = current;
+                            tokenCollection.addToken(new ParenToken(token, category, parenLevel++));
+
+                            category = '\0'; // Indicate new token will be started
+                            token = "";
+                            continue;
                         }
                         else if (current == ')')
                         {
-                            type = ')';
+                            category = ')';
+                            tokenCollection.addToken(new ParenToken(token, category, --parenLevel));
+
+                            category = '\0'; // Indicate new token will be started
+                            token = "";
+                            continue;
                         }
                         else
                         {
                             // Any other character is invalid for the start of a token
-                            throw new TokenizerException("Invalid character '" + current + "' for start of token at index " + i + ", unable to tokenize.", i);
+                            tokenError("Invalid character '" + current + "' for start of token at index " + i + ", unable to tokenize.", i, throwExceptions, tokenCollection);
                         }
                             break;
                     case 's':
@@ -101,7 +127,7 @@ namespace QuickCalculator
                         else if (current == '.')
                         {
                             if (hasDecimal) {
-                                throw new TokenizerException("Input cannot have multiple decimals, unable to tokenize.", i);
+                                tokenError("Input cannot have multiple decimals, unable to tokenize.", i, throwExceptions, tokenCollection);
                             }
                             else {
                                 hasDecimal = true;
@@ -117,13 +143,27 @@ namespace QuickCalculator
                         }
                         break;
                 }
-                tokens[currentIndex] = new Token(token, type);
-                currentIndex++;
-                type = '\0'; // Change the type to indicate that we are starting a new token
+                tokenCollection.addToken(new Token(token, category));
+                category = '\0'; // Change the category to indicate that we are starting a new token
                 token = "";
             }
-            tokens[currentIndex] = new Token(token, type); // Insert the last token
-            return tokens;
+            if (category == 's' || category == 'n') // If the last token is a symbol or number, it hasn't been added yet
+            {
+                tokenCollection.addToken(new Token(token, category));
+            }
+            return tokenCollection;
+        }
+
+        private static void tokenError(string message, int charIndex, bool throwException, TokenCollection tokenCollection)
+        {
+            if (throwException)
+            {
+                throw new TokenizerException(message, charIndex);
+            }
+            else
+            {
+                tokenCollection.modifyError(charIndex, true);
+            }
         }
     }
 }

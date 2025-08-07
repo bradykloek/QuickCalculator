@@ -31,6 +31,7 @@ namespace QuickCalculator
             bool hasDecimal = false;
             bool hasAssignment = false;
             int parenLevel = 0;
+            int inputStart = 0;
             for (int i = 0; i < input.Length; i++)
             {
                 current = input[i];
@@ -47,6 +48,7 @@ namespace QuickCalculator
                 {
                     case '\0': // If a category hasn't yet been determined, we need to start with 
                         token += current;
+                        inputStart = i;
 
                         // If the token starts with a letter, then it is a Variable or Function, collectively called a Symbol
                         if (Char.IsLetter(current))
@@ -78,20 +80,23 @@ namespace QuickCalculator
                                 hasAssignment = true;
                             }
                         }
-                        else  if (current == '(')
+                        else  if (current == '(' || current == ')')
                         {
                             category = current;
-                            tokenCollection.addToken(new ParenToken(token, category, parenLevel++));
 
-                            category = '\0'; // Indicate new token will be started
-                            token = "";
-                            continue;
-                        }
-                        else if (current == ')')
-                        {
-                            category = ')';
-                            tokenCollection.addToken(new ParenToken(token, category, --parenLevel));
+                            if (current == '(') tokenCollection.AddToken(new ParenToken(token, category, inputStart, i, parenLevel++));
+                            else
+                            {
+                                if(parenLevel == 0)
+                                {
+                                    tokenError("Unopened closing parentheses at index " + i + ", unable to tokenize.", i, throwExceptions, tokenCollection);
+                                }
+                                else
+                                {
+                                    tokenCollection.AddToken(new ParenToken(token, category, inputStart, i, --parenLevel));
 
+                                }
+                            }
                             category = '\0'; // Indicate new token will be started
                             token = "";
                             continue;
@@ -143,13 +148,13 @@ namespace QuickCalculator
                         }
                         break;
                 }
-                tokenCollection.addToken(new Token(token, category));
+                tokenCollection.AddToken(new Token(token, category, inputStart, i));
                 category = '\0'; // Change the category to indicate that we are starting a new token
                 token = "";
             }
             if (category == 's' || category == 'n') // If the last token is a symbol or number, it hasn't been added yet
             {
-                tokenCollection.addToken(new Token(token, category));
+                tokenCollection.AddToken(new Token(token, category, inputStart, input.Length));
             }
             return tokenCollection;
         }
@@ -162,7 +167,7 @@ namespace QuickCalculator
             }
             else
             {
-                tokenCollection.modifyError(charIndex, true);
+                tokenCollection.ModifyError(charIndex, true);
             }
         }
     }

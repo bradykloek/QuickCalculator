@@ -32,7 +32,7 @@ namespace QuickCalculator
              */
         }
 
-        public void addToken(Token token)
+        public void AddToken(Token token)
         {
             if(tokenCount >= tokens.Length)
             {
@@ -43,7 +43,7 @@ namespace QuickCalculator
             tokenCount++;
         }
 
-        public void modifyError(int index, bool newStatus)
+        public void ModifyError(int index, bool newStatus)
         {
             if(index < 0 || index >= errorIndices.Length)
             {
@@ -53,17 +53,17 @@ namespace QuickCalculator
             errorIndices[index] = newStatus;
         }
 
-        public Token[] getTokens()
+        public Token[] GetTokens()
         {
             return tokens;
         }
 
-        public bool[] getErrors()
+        public bool[] GetErrors()
         {
             return errorIndices;
         }
 
-        public int getTokenCount()
+        public int GetTokenCount()
         {
             return tokenCount;
         }

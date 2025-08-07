@@ -9,7 +9,7 @@ namespace QuickCalculator
     internal class ParenToken : Token
     {
         private int level;
-        public ParenToken(string token, char type, int level) : base(token, type)
+        public ParenToken(string token, char type, int start, int end, int level) : base(token, type, start, end)
         {
             this.level = level;
         }

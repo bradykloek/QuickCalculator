@@ -6,9 +6,13 @@ namespace QuickCalculator
 {
     public partial class InputWindow : Form
     {
-        Color BLUE = Color.FromArgb(0, 200, 255);
-        Color ORANGE = Color.FromArgb(255, 180, 0);
-        Color PURPLE = Color.FromArgb(240, 30, 255);
+        Color PAREN1 = Color.FromArgb(0, 200, 255);         // Blue
+        Color PAREN2 = Color.FromArgb(255, 180, 0);         // Orange
+        Color PAREN3 = Color.FromArgb(240, 30, 255);        // Purple
+        Color NUMBER = Color.FromArgb(120, 240, 255);       // Turquoise
+        Color OPERATOR = Color.FromArgb(160, 255, 150);     // Green
+        Color SYMBOL = Color.FromArgb(180, 180, 255);       // Purple
+
         public InputWindow()
         {
             InitializeComponent();
@@ -26,28 +30,18 @@ namespace QuickCalculator
 
                 // We want to throw any exceptions after the user hits Enter
                 TokenCollection tokenCollection = Tokenizer.Tokenize(inputTextBox.Text, true);
-                System.Windows.Forms.MessageBox.Show(string.Join(" ", (object[])tokenCollection.getTokens()));
+                System.Windows.Forms.MessageBox.Show(string.Join(" ", (object[])tokenCollection.GetTokens()));
             }
         }
 
         private void inputTextBox_TextChanged(object sender, EventArgs e)
         {
-
-
             // Don't throw exceptions because the user is currently typing
             TokenCollection tokenCollection = Tokenizer.Tokenize(inputTextBox.Text, false);
-            bool[] errorIndices = tokenCollection.getErrors();
+            bool[] errorIndices = tokenCollection.GetErrors();
 
-            for (int i = 0; i < errorIndices.Length; i++)
-            {
-                if (errorIndices[i]) // If index i caused an error
-                {
-                    colorText(i, 1, Color.Red, FontStyle.Underline);
-                    Debug.WriteLine(i.ToString());
-                }
-            }
-
-            colorParens(tokenCollection);
+            colorErrors(tokenCollection);
+            colorTokens(tokenCollection);
         }
 
         private void colorText(int start, int length, Color color, FontStyle style)
@@ -63,30 +57,43 @@ namespace QuickCalculator
             inputTextBox.SelectionLength = selectionLength;
         }
 
-        private void colorParens(TokenCollection tokenCollection)
+        private void colorErrors(TokenCollection tokenCollection)
         {
-            // Blue, Orange, Purple
-            Color[] parenColors = { BLUE, ORANGE, PURPLE};
-            Token[] tokens = tokenCollection.getTokens();
-            string text = inputTextBox.Text;
-            int tokenIdx = 0;
-            for (int charIdx = 0; charIdx < text.Length; charIdx++)
+            bool[] errorIndices = tokenCollection.GetErrors();
+            for (int i = 0; i < errorIndices.Length; i++)
             {
-                if (text[charIdx] == '(' || text[charIdx] == ')')
+                if (errorIndices[i]) // If index i caused an error
                 {
-                    while (tokens[tokenIdx].GetCategory() != text[charIdx])
-                    {
-                        tokenIdx++;
-                        if (tokenIdx >= tokens.Length)
-                        {
-                            throw new IndexOutOfRangeException("Token and Text mismatch.");
-                        }
-                    }
-                    int level = ((ParenToken)tokens[tokenIdx]).GetLevel();
-                    tokenIdx++;
-                    Debug.WriteLine("" + charIdx + " : " + level);
-                    colorText(charIdx, 1, parenColors[level % 3], FontStyle.Regular);
+                    colorText(i, 1, Color.Red, FontStyle.Underline);
+                    Debug.WriteLine(i.ToString());
+                }
+            }
+        }
 
+        private void colorTokens(TokenCollection tokenCollection)
+        {
+            Token[] tokens = tokenCollection.GetTokens();
+            Color[] parenColors = { PAREN1, PAREN2, PAREN3};
+            for (int i = 0; i < tokenCollection.GetTokenCount(); i++)
+            {
+                int tokenStart = tokens[i].GetStart();
+                int tokenLength = tokens[i].GetEnd() - tokenStart ; // Exclusive on right, so -1
+                switch (tokens[i].GetCategory())
+                {
+                    case '(':
+                    case ')':
+                        int level = ((ParenToken)tokens[i]).GetLevel();
+                        colorText(tokenStart, 1, parenColors[level % 3], FontStyle.Regular);
+                        break;
+                    case 'n':
+                        colorText(tokenStart, tokenLength, NUMBER, FontStyle.Regular);
+                        break;
+                    case 'o':
+                        colorText(tokenStart, 1, OPERATOR, FontStyle.Regular);
+                        break;
+                    case 's':
+                        colorText(tokenStart, tokenLength, SYMBOL, FontStyle.Regular);
+                        break;
                 }
             }
         }

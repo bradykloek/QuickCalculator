@@ -9,10 +9,13 @@ namespace QuickCalculator
     internal class Token
     {
         private string token; // String representing the contents of a single token
-        private char category; /* Indicates the category of the token
-                                    *      s = Symbol (variable or function)
+        private char category; /* Indicates the category of the 
                                     *      n = Number
                                     *      o = Operator
+                                    *      v = Variable
+                                    *      f = Function
+                                    *      ( = Open Parenthesis
+                                    *      ) = Closed Parenthesis
                                     */
 
         private int inputStart, inputEnd; // Store the indexes of the input string that comprise this token. [start, end)

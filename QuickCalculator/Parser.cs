@@ -82,7 +82,7 @@ namespace QuickCalculator
                         left = left % right;
                         break;
                     case "//":
-                        left = (int)left / (int)right;
+                        left = Math.Floor(left / right);
                         break;
                 }
             }

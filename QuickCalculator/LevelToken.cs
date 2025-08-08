@@ -6,10 +6,10 @@ using System.Threading.Tasks;
 
 namespace QuickCalculator
 {
-    internal class ParenToken : Token
+    internal class LevelToken : Token
     {
         private int level;
-        public ParenToken(string token, char type, int start, int end, int level) : base(token, type, start, end)
+        public LevelToken(string token, char category, int start, int end, int level) : base(token, category, start, end)
         {
             this.level = level;
         }

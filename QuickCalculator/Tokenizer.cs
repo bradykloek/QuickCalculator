@@ -8,26 +8,27 @@ namespace QuickCalculator
 {
     internal class Tokenizer
     {
-        private string input;                   // The raw string input
-        private bool throwException;            // Whether we should throw exceptions or just store them
+        private string input;                       // The raw string input
+        private Evaluator evaluator;                // Evaluator object that created this Tokenizer. Things like error data will be stored here
         private List<Token> tokens;                 // Stores the tokens that get created
-        private List<EvaluationException> exceptions;       // If we don't throw exceptions, they will be stored here
-        private Evaluator evaluator;
 
         private static char[] operators = { '+', '-', '*', '/', '^', '%', '!', '=' };
-        private static char[] validSymbols = { '.', ',', '(', ')', '[', ']' };
 
-        bool hasAssignment = false;
-        bool hasDecimal;
-        bool implicitMultiplication;
-        int parenLevel = 0;
-        Token addToken;
-
-        char current = '\0';
-        int currentIndex = -1;
-        char category = '\0';
-        string token = "";
-        int inputStart = 0;
+        // Flags and variables that store temporary information for the Tokenizer
+        bool hasAssignment = false;     // Assignment Operator encountered
+        int parenLevel = 0;             // Current level of parenthesization
+        int functionLevel = 0;          // Current level of function nesting
+        bool hasDecimal;                // Current number token contains a decimal
+        bool implicitMultiplication;    // Detected implicit multiplication
+        Token addToken;                 /* Stores a token that was initialized somewhere other than the end of the Tokenize() loop
+                                         * (this is used for creating tokens of a different subclass that hold extra information) */
+        
+        // Information for the current token
+        char current = '\0';            // Current character of the input string
+        int currentIndex = -1;          // Curent index in the input string
+        char category = '\0';           // Category of the current token
+        string token = "";              // String content of the current token
+        int tokenStart = 0;             // Index that the current token started at
 
         public Tokenizer(string input, Evaluator evaluator)
         {
@@ -63,6 +64,10 @@ namespace QuickCalculator
             return sb.ToString();
         }
 
+        /// <summary>
+        /// Advances to the next character in the input string
+        /// </summary>
+        /// <returns></returns>
         private bool NextChar()
         {
             if (currentIndex >= input.Length - 1) return false;
@@ -72,6 +77,11 @@ namespace QuickCalculator
             return true;
         }
 
+        /// <summary>
+        /// If a token has already been created and stored in addToken, add that to tokens.
+        /// Otherwise, add thew newToken that is passed in.
+        /// </summary>
+        /// <param name="newToken"></param>
         private void AddToken(Token newToken)
         {
             if(addToken != null)
@@ -86,9 +96,7 @@ namespace QuickCalculator
         }
 
         /// <summary>
-        /// Takes in the input string to populate the tokens array.
-        /// If !throwExceptions, it will also fill the exceptions list.
-        /// This is called from the constructor.
+        /// Tokenizes all characters of the input string. This is called by the constructor.
         /// </summary>
         private void Tokenize()
         {
@@ -113,7 +121,7 @@ namespace QuickCalculator
                         else continue;
                 }
                 
-                AddToken(new Token(token, category, inputStart, currentIndex + 1));
+                AddToken(new Token(token, category, tokenStart, currentIndex + 1));
 
                 if (implicitMultiplication)
                 {
@@ -126,7 +134,7 @@ namespace QuickCalculator
 
             if (category == 'v' || category == 'n' || category == 'f') // If the last token is a symbol, number, or function, it hasn't been added yet
             {
-                AddToken(new Token(token, category, inputStart, input.Length));
+                AddToken(new Token(token, category, tokenStart, input.Length));
             }
 
             // Check if all parentheses have been matched
@@ -146,10 +154,14 @@ namespace QuickCalculator
         }
 
 
+        /// <summary>
+        /// Handles starting a new token. Categorizes the token based on the first letter.
+        /// </summary>
+        /// <returns>bool indicating whether the current token is completed or needs to continue to be read</returns> 
         private bool StartToken()
         {
             token += current;
-            inputStart = currentIndex;
+            tokenStart = currentIndex;
 
             /* If the token starts with a letter, then it is a Variable or Function. It will be marked as a variable
              * and stay as such unless a [ is found indicating it is a function */
@@ -163,7 +175,11 @@ namespace QuickCalculator
             else if (Char.IsDigit(current) || current == '.')
             {
                 category = 'n'; // n indicates Number
-                hasDecimal = current == '.';
+                if(current == '.')
+                {
+                    token = "0."; // If the first character of the number is a decimal, change it to "0." to avoid parsing errors
+                    hasDecimal = true;
+                }
                 return false;
             }
 
@@ -179,6 +195,13 @@ namespace QuickCalculator
                 TokenizeParenthesis();
                 return true;
             }
+            else if (current == '[' || current == ']')
+            {
+                category = current;
+
+                TokenizeBracket();
+                return true;
+            }
             else
             {
                 // Any other character is invalid for the start of a token
@@ -187,6 +210,10 @@ namespace QuickCalculator
             return true;
         }
 
+        /// <summary>
+        /// Tokenizes a number token
+        /// </summary>
+        /// <returns>bool indicating whether the current token is completed or needs to continue to be read</returns>
         private bool TokenizeNumber()
         {
             // This character continues the token only if it is a digit or decimal
@@ -195,9 +222,9 @@ namespace QuickCalculator
                 token += current;
                 return false;
             }
-            else if (current == ',')
-            {
-                return false; // Commas can be in numbers and are simply ignored
+            else if (current == ',' && functionLevel == 0)
+            {   // Commas can be in numbers and are simply ignored UNLESS the tokenizer is inside of a functions brackets, because then they separate arguments
+                return false; 
             }
             else if (current == '.')
             {
@@ -227,6 +254,11 @@ namespace QuickCalculator
             }
             return true;
         }
+
+        /// <summary>
+        /// Tokenizes a variable token
+        /// </summary>
+        /// <returns>bool indicating whether the current token is completed or needs to continue to be read</returns>
         private bool TokenizeVariable()
         {
             // This character continues the token if it is a letter or digit
@@ -238,7 +270,8 @@ namespace QuickCalculator
 
             if (current == '[')
             {
-                category = 'f'; // If we encounter a [, this indicates this variable is actually a function
+                // If we encounter a [, this indicates this variable is actually a function
+                addToken = new LevelToken(token, 'f', tokenStart, currentIndex, functionLevel++);
             }
 
             /*  The current token ends and we will start a new one.
@@ -247,6 +280,10 @@ namespace QuickCalculator
             return true;
         }
 
+        /// <summary>
+        /// Tokenizes an operator token
+        /// </summary>
+        /// <returns>bool indicating whether the current token is completed or needs to continue to be read</returns>
         private bool TokenizeOperator()
         {
             /* Before checking the other operators, we first must handle a special case for '-' 
@@ -254,6 +291,7 @@ namespace QuickCalculator
             if (current == '-'  && (tokens.Count() == 0 || tokens[tokens.Count() - 1].GetCategory() == 'o'))
             {   // If this is the first token or the previous token was an operator, it is unary 
                 category = 'n';     // It should be interpreted as a number isntead of an operator
+                token = "-0";       // Change token to avoid it causing errors when it is parsed as a double
                 return false;   
             }
 
@@ -279,19 +317,43 @@ namespace QuickCalculator
             return true;
         }
 
+        /// <summary>
+        /// Tokenizes a parenthesis token
+        /// </summary>
         private void TokenizeParenthesis()
         {
-            if (current == '(') addToken = new ParenToken(token, category, inputStart, currentIndex, parenLevel++);
+            if (current == '(') addToken = new LevelToken(token, category, tokenStart, currentIndex, parenLevel++);
             else
             {
                 if (parenLevel == 0)
                 {
                     evaluator.AddException("Unmatched closing parenthesis.", currentIndex, currentIndex + 1);
+                    parenLevel++;   // This is to avoid the parenLevel being negative when the token is added, which would cause errores elsewhere
                 }
-                else
+                addToken = new LevelToken(token, category, tokenStart, currentIndex, --parenLevel);
+            }
+        }
+
+        private void TokenizeBracket()
+        {
+
+            if (current == '[')
+            {
+                if (currentIndex == 0 || tokens[currentIndex - 1].GetCategory() != 'f')
+                {   // Brackets can only occur after a function token
+                    evaluator.AddException("'[' must immediately follow a function name.", currentIndex, currentIndex + 1);
+                }
+                addToken = new LevelToken(token, category, tokenStart, currentIndex + 1, functionLevel);
+                // Don't increment functionLevel here because the intiial function token 
+            }
+            else
+            {
+                if (functionLevel == 0)
                 {
-                    addToken = new ParenToken(token, category, inputStart, currentIndex, --parenLevel);
+                    evaluator.AddException("Unmatched closing bracket.", currentIndex, currentIndex + 1);
+                    functionLevel++;
                 }
+                addToken = new LevelToken(token, category, tokenStart, currentIndex + 1, --functionLevel);
             }
         }
 
@@ -306,12 +368,12 @@ namespace QuickCalculator
                 bool matched = false;
                 if (tokens[i].GetCategory() == '(')
                 {
-                    ParenToken openParen = (ParenToken)tokens[i];
+                    LevelToken openParen = (LevelToken)tokens[i];
                     for (int j = i + 1; j < tokens.Count(); j++)
                     {
                         if (tokens[j].GetCategory() == ')')
                         {
-                            ParenToken closeParen = (ParenToken)tokens[j];
+                            LevelToken closeParen = (LevelToken)tokens[j];
                             if (openParen.GetLevel() == closeParen.GetLevel())
                             {
                                 matched = true;
@@ -329,6 +391,11 @@ namespace QuickCalculator
             }
         }
 
+        /// <summary>
+        /// After tokenization is completed, if an assignment operator was encountered this method will be called.
+        /// Determines which token is the variable that will store the resulting value. This token is sent to be stored in
+        /// evaluator then is removed from the token list.
+        /// </summary>
         private void prepareAssignment()
         {
             int assignmentIdx = 0;
@@ -358,11 +425,11 @@ namespace QuickCalculator
 
             if (prevToken.GetCategory() == 'v' && nextToken.GetCategory() == 'v') // If both are variables
             {
-                if (VariableTable.vars.ContainsKey(nextToken.GetToken()))
+                if (Symbols.variables.ContainsKey(nextToken.GetToken()))
                 {   // So long as next is defined, we assign prev <= next (leftward asignment by default)
                     variableIdx = assignmentIdx - 1;
                 }
-                else if (VariableTable.vars.ContainsKey(prevToken.GetToken()))
+                else if (Symbols.variables.ContainsKey(prevToken.GetToken()))
                 {   // If next isn't defined but prev is, then we do rightward assignment - prev => next
                     variableIdx = assignmentIdx + 1;
                 }

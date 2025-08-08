@@ -12,9 +12,10 @@ namespace QuickCalculator
         Color PAREN2 = Color.FromArgb(255, 180, 0);         // Orange
         Color PAREN3 = Color.FromArgb(240, 30, 255);        // Purple
         Color NUMBER = Color.FromArgb(120, 240, 255);       // Turquoise
-        Color OPERATOR = Color.FromArgb(160, 255, 150);     // Green
-        Color VARIABLE = Color.FromArgb(180, 180, 255);     // Purple
+        Color OPERATOR = Color.FromArgb(160, 255, 150);     // Light Green
+        Color VARIABLE = Color.FromArgb(180, 180, 255);     // Light Purple
         Color ASSIGNMENT = Color.FromArgb(255, 255, 70);    // Yellow
+        Color FUNCTION = Color.FromArgb(255, 150, 255);     // Pink
 
         public InputWindow()
         {
@@ -39,7 +40,7 @@ namespace QuickCalculator
                     System.Windows.Forms.MessageBox.Show(evaluator.ToString());
                     if (evaluator.GetAssignVariable() != "")
                     {   // If parser encountered no errors and a variable is to be assigned
-                        VariableTable.vars[evaluator.GetAssignVariable()] = evaluator.GetResult();
+                        Symbols.variables[evaluator.GetAssignVariable()] = evaluator.GetResult();
                     }
                 }
                 else
@@ -111,7 +112,7 @@ namespace QuickCalculator
                 {
                     case '(':
                     case ')':
-                        int level = ((ParenToken)tokens[i]).GetLevel();
+                        int level = ((LevelToken)tokens[i]).GetLevel();
                         colorText(tokenStart, 1, parenColors[level % 3], FontStyle.Regular);
                         break;
                     case 'n':
@@ -122,6 +123,11 @@ namespace QuickCalculator
                         break;
                     case 'v':
                         colorText(tokenStart, tokenLength, VARIABLE, FontStyle.Regular);
+                        break;
+                    case 'f':
+                    case '[':
+                    case ']':
+                        colorText(tokenStart, tokenLength, FUNCTION, FontStyle.Regular);
                         break;
                 }
             }

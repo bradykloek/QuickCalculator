@@ -80,6 +80,10 @@ namespace QuickCalculator
                         break;
                     case "%":
                         left = left % right;
+                        if(left < 0)
+                        {
+                            left += right;  // C# % is actually remainder instead of modulo. This changes it to modulo behavior
+                        }
                         break;
                     case "//":
                         left = Math.Floor(left / right);
@@ -122,9 +126,19 @@ namespace QuickCalculator
                     value = ParseExpression();
                     break;
                 case 'v':
-                    if (VariableTable.vars.Contains(token.GetToken()))
+                    if (Symbols.variables.Contains(token.GetToken()))
                     {
-                        value = (double)VariableTable.vars[token.GetToken()];
+                        value = (double)Symbols.variables[token.GetToken()];
+                    }
+                    else
+                    {
+                        evaluator.AddException("Undefined variable '" + token.GetToken() + "'.", token.GetStart(), token.GetEnd());
+                    }
+                    break;
+                case 'f':
+                    if (Symbols.variables.Contains(token.GetToken()))
+                    {
+                        value = (double)Symbols.variables[token.GetToken()];
                     }
                     else
                     {

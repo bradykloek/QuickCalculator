@@ -15,14 +15,14 @@ namespace QuickCalculator
 
 
         private Token[] tokens;         // Holds all of the Tokens that are created
-        private List<TokenizerException> tokenizerExceptions;    // List that stores all exceptions that were encountered
+        private List<EvaluationException> tokenizerExceptions;    // List that stores all exceptions that were encountered
         private int tokenCount = 0;     // Stores how many tokens are in the tokens array
 
         public TokenCollection(int charCount)
         {
             tokenCount = 0;
             tokens = new Token[charCount+1];
-            tokenizerExceptions = new List<TokenizerException>();
+            tokenizerExceptions = new List<EvaluationException>();
 
             /*   tokens has one element per token. This has an UPPER BOUND of charCount, and due to these arrays being used
              *   only once then discarded, the empty space is negligible. It is more efficient to avoid using a dynamic array that
@@ -41,7 +41,7 @@ namespace QuickCalculator
             tokenCount++;
         }
 
-        public void TokenizerError(TokenizerException exception)
+        public void TokenizerError(EvaluationException exception)
         {
             tokenizerExceptions.Add(exception);
         }
@@ -51,7 +51,7 @@ namespace QuickCalculator
             return tokens;
         }
 
-        public List<TokenizerException> GetExceptions()
+        public List<EvaluationException> GetExceptions()
         {
             return tokenizerExceptions;
         }

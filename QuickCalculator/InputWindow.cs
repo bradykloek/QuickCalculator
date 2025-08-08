@@ -29,17 +29,16 @@ namespace QuickCalculator
             {
                 e.SuppressKeyPress = true;
 
-                Tokenizer tokenizer = new Tokenizer(inputTextBox.Text, false);
-                if(tokenizer.GetExceptions().Count() == 0)
-                {
-                    //System.Windows.Forms.MessageBox.Show(string.Join(" ", tokenizer.GetTokens()));
-                    System.Windows.Forms.MessageBox.Show(new Parser(tokenizer).ToString());
+                Evaluator evaluator = new Evaluator(inputTextBox.Text, false);
 
+                if (evaluator.GetExceptions().Count() == 0)
+                {
+
+                    System.Windows.Forms.MessageBox.Show(evaluator.ToString());
                 }
                 else
                 {
-                    System.Windows.Forms.MessageBox.Show(buildErrorMessage(tokenizer));
-
+                    System.Windows.Forms.MessageBox.Show(evaluator.ErrorMessage());
                 }
 
             }
@@ -47,10 +46,10 @@ namespace QuickCalculator
 
         private void inputTextBox_TextChanged(object sender, EventArgs e)
         {
-            Tokenizer tokenizer = new Tokenizer(inputTextBox.Text, false);
+            Evaluator evaluator = new Evaluator(inputTextBox.Text, false);
 
-            colorTokens(tokenizer);
-            colorErrors(tokenizer);
+            colorTokens(evaluator);
+            colorErrors(evaluator);
         }
 
         /// <summary>
@@ -77,12 +76,14 @@ namespace QuickCalculator
         /// Colors all characters that caused Tokenizer Errors to red with an underline
         /// </summary>
         /// <param name="tokenizer"></param> Collection of tokens that is parsed
-        private void colorErrors(Tokenizer tokenizer)
+        private void colorErrors(Evaluator evaluator)
         {
-            List<TokenizerException> tokenizerExceptions = tokenizer.GetExceptions();
+            List<EvaluationException> tokenizerExceptions = evaluator.GetExceptions();
             for (int i = 0; i < tokenizerExceptions.Count(); i++)
             {
-                colorText(tokenizerExceptions[i].GetCharIndex(), 1, Color.Red, FontStyle.Underline);
+                int start = tokenizerExceptions[i].GetStart();
+                int end = tokenizerExceptions[i].GetEnd();
+                colorText(start, end, Color.Red, FontStyle.Underline);
             }
         }
 
@@ -90,9 +91,10 @@ namespace QuickCalculator
         /// Colors characters in the input text box to colors that indicate their token category
         /// </summary>
         /// <param name="tokenizer"></param> Collection of tokens that is parsed
-        private void colorTokens(Tokenizer tokenizer)
+        private void colorTokens(Evaluator evaluator)
         {
-            List<Token> tokens = tokenizer.GetTokens();
+            colorText(0, inputTextBox.Text.Length, Color.White, FontStyle.Regular);
+            List<Token> tokens = evaluator.GetTokenizer().GetTokens();
             Color[] parenColors = { PAREN1, PAREN2, PAREN3};
             for (int i = 0; i < tokens.Count(); i++)
             {
@@ -109,25 +111,13 @@ namespace QuickCalculator
                         colorText(tokenStart, tokenLength, NUMBER, FontStyle.Regular);
                         break;
                     case 'o':
-                        colorText(tokenStart, 1, OPERATOR, FontStyle.Regular);
+                        colorText(tokenStart, tokenLength, OPERATOR, FontStyle.Regular);
                         break;
                     case 'v':
                         colorText(tokenStart, tokenLength, SYMBOL, FontStyle.Regular);
                         break;
                 }
             }
-        }
-        
-        private string buildErrorMessage(Tokenizer tokenizer)
-        {
-            StringBuilder sb = new StringBuilder();
-            List<TokenizerException> tokenizerExceptions = tokenizer.GetExceptions();
-            sb.Append("Tokenizer encountered " + tokenizerExceptions.Count() + " errors:\n");
-            for(int i = 0; i < tokenizerExceptions.Count(); i++)
-            {
-                sb.Append(" " + (i+1) + ":   " + tokenizerExceptions[i].ToString() + "\n");
-            }
-            return sb.ToString();
         }
         
         private void inputTextBox_KeyPress(object sender, KeyPressEventArgs e)

@@ -11,15 +11,15 @@ namespace QuickCalculator
         private string input;                   // The raw string input
         private bool throwException;            // Whether we should throw exceptions or just store them
         private List<Token> tokens;                 // Stores the tokens that get created
-        private List<TokenizerException> tokenizerExceptions;       // If we don't throw exceptions, they will be stored here
+        private List<EvaluationException> exceptions;       // If we don't throw exceptions, they will be stored here
+        private Evaluator evaluator;
 
-        public Tokenizer(string input, bool throwException)
+        public Tokenizer(string input, Evaluator evaluator)
         {
             this.input = input;
-            this.throwException = throwException;
+            this.evaluator = evaluator;
             tokens = new List<Token>(input.Length / 2);
             // Starts tokens with a capacity of 50% of input.Length to avoid the initial resizings which would almost always occur
-            tokenizerExceptions = new List<TokenizerException>();
 
             Tokenize();
         }
@@ -30,14 +30,9 @@ namespace QuickCalculator
             return tokens;
         }
 
-        public List<TokenizerException> GetExceptions()
-        {
-            return tokenizerExceptions;
-        }
-
         /// <summary>
         /// Takes in the input string to populate the tokens array.
-        /// If !throwExceptions, it will also fill the tokenizerExceptions list.
+        /// If !throwExceptions, it will also fill the exceptions list.
         /// This is called from the constructor.
         /// </summary>
         private void Tokenize()
@@ -70,7 +65,7 @@ namespace QuickCalculator
                 }
                 else if (!(Char.IsLetter(current) || Char.IsDigit(current) || validSymbols.Contains(current) || operators.Contains(current)))
                 { // Only letters, digits, and select symbols are valid
-                    TokenizerError("Invalid character '" + current + "'.",i);
+                    evaluator.AddException("Invalid character '" + current + "'.",i,i+1);
                     continue;
                 }
 
@@ -96,31 +91,53 @@ namespace QuickCalculator
                             continue;
                         }
 
+                        // Before checking for operators, we first must handle a special case for - to check
+                        // if it should be the unary negation operator instead of subtraction
+                        else if (current == '-')
+                        {
+                            // If this is the first token or the previous token was an operator, it is unary negation
+                            if(tokens.Count() == 0 || tokens[tokens.Count() - 1].GetCategory() == 'o')
+                            {
+                                category = 'n';
+                                continue;
+                            }
+                        }
+
                         else if (operators.Contains(current))
                         {
                             category = 'o'; // o indicates Operator
                             /*  Since operators can only be one character long, the token node can immediately without more looping,
                                 so we will immediately break out of the switch */
 
-                            if(current == '=')
+                            if (current == '=')
                             {
                                 if (hasAssignment)
                                 {
-                                    TokenizerError("Expression contains multiple assignment operators '='.", i);
+                                    evaluator.AddException("Expression contains multiple assignment operators '='.", i, i+1);
                                 }
                                 hasAssignment = true;
                             }
+
+                            // The only operator that is more than one character is // for integer division. Special case.
+                            if (current == '/')
+                            {
+                                if (i + 1 < input.Length && input[i + 1] == '/')
+                                {
+                                    token = "//";
+                                    i++; // Move past the second '/' since we have already tokenized it
+                                }
+                            }
                         }
-                        else  if (current == '(' || current == ')')
+                        else if (current == '(' || current == ')')
                         {
                             category = current;
 
                             if (current == '(') tokens.Add(new ParenToken(token, category, inputStart, i, parenLevel++));
                             else
                             {
-                                if(parenLevel == 0)
+                                if (parenLevel == 0)
                                 {
-                                    TokenizerError("Unmatched closing parenthesis.", i);
+                                    evaluator.AddException("Unmatched closing parenthesis.", i, i + 1);
                                 }
                                 else
                                 {
@@ -135,7 +152,7 @@ namespace QuickCalculator
                         else
                         {
                             // Any other character is invalid for the start of a token
-                            TokenizerError("Invalid character '" + current + "' for start of token.", i);
+                            evaluator.AddException("Invalid character '" + current + "' for start of token.", i, i + 1);
                         }
                             break;
                     case 'v':
@@ -170,7 +187,7 @@ namespace QuickCalculator
                         {
                             if (hasDecimal)
                             {
-                                TokenizerError("Number contains multiple decimal points.", i);
+                                evaluator.AddException("Number contains multiple decimal points.", i, i + 1);
                             }
                             else
                             {
@@ -194,10 +211,10 @@ namespace QuickCalculator
                         }
                         break;
                 }
-                tokens.Add(new Token(token, category, inputStart, i));
+                tokens.Add(new Token(token, category, inputStart, i + 1));
                 if (implicitMultiplication)
                 {
-                    // If implicit multiplication was detected, add a * token
+                    // If implicit multiplication was detected, add a * token (of length 0)
                     tokens.Add(new Token("*", 'o', i, i));
                 }
                 category = '\0'; // Change the category to indicate that we are starting a new token
@@ -212,27 +229,6 @@ namespace QuickCalculator
             if(parenLevel != 0)
             {
                 checkParentheses();
-            }
-        }
-
-        /// <summary>
-        /// TokenizerError handles any input that aren't valid for tokenization. It either throws an error or stores the 
-        /// index that caused the error in errorIndices, depending on how the Tokinize() call is being used.
-        /// </summary>
-        /// <param name="message"></param> Error Message
-        /// <param name="charIndex"></param> Index of the input string that caused the error
-        /// <exception cref="TokenizerException"></exception>
-        private void TokenizerError(string message, int charIndex)
-        {
-            TokenizerException exception = new TokenizerException(message, charIndex);
-
-            if (throwException)
-            {
-                throw exception;
-            }
-            else
-            {
-                tokenizerExceptions.Add(exception);
             }
         }
 
@@ -263,7 +259,7 @@ namespace QuickCalculator
 
                     if (!matched)
                     {
-                        TokenizerError("Unmatched open parenthesis.", openParen.GetStart());
+                        evaluator.AddException("Unmatched open parenthesis.", openParen.GetStart(), openParen.GetEnd());
                     }
 
                 }

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -13,6 +14,7 @@ namespace QuickCalculator
         private double result;
         private Tokenizer tokenizer;
         private Parser parser;
+        private string assignVariable = "";
 
         public Evaluator(string input, bool throwExceptions)
         {
@@ -29,6 +31,11 @@ namespace QuickCalculator
         public double GetResult()
         {
             return result;
+        }
+
+        public int GetExceptionCount()
+        {
+            return exceptions.Count();
         }
 
         public Tokenizer GetTokenizer()
@@ -49,6 +56,17 @@ namespace QuickCalculator
         public string ToString()
         {
             return result.ToString();
+        }
+
+        public void SetAssignVariable(string variableName)
+        {
+            Debug.WriteLine("ASSIGN!");
+            assignVariable = variableName;
+        }
+
+        public string GetAssignVariable()
+        {
+            return assignVariable;
         }
 
         /// <summary>

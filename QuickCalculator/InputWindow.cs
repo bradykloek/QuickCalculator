@@ -1,7 +1,8 @@
+using System;
 using System.Diagnostics;
 using System.Drawing;
-using System.Windows.Forms;
 using System.Text;
+using System.Windows.Forms;
 
 namespace QuickCalculator
 {
@@ -12,7 +13,8 @@ namespace QuickCalculator
         Color PAREN3 = Color.FromArgb(240, 30, 255);        // Purple
         Color NUMBER = Color.FromArgb(120, 240, 255);       // Turquoise
         Color OPERATOR = Color.FromArgb(160, 255, 150);     // Green
-        Color SYMBOL = Color.FromArgb(180, 180, 255);       // Purple
+        Color VARIABLE = Color.FromArgb(180, 180, 255);     // Purple
+        Color ASSIGNMENT = Color.FromArgb(255, 255, 70);    // Yellow
 
         public InputWindow()
         {
@@ -31,10 +33,14 @@ namespace QuickCalculator
 
                 Evaluator evaluator = new Evaluator(inputTextBox.Text, false);
 
-                if (evaluator.GetExceptions().Count() == 0)
+                if (evaluator.GetExceptionCount() == 0)
                 {
 
                     System.Windows.Forms.MessageBox.Show(evaluator.ToString());
+                    if (evaluator.GetAssignVariable() != "")
+                    {   // If parser encountered no errors and a variable is to be assigned
+                        VariableTable.vars[evaluator.GetAssignVariable()] = evaluator.GetResult();
+                    }
                 }
                 else
                 {
@@ -93,7 +99,8 @@ namespace QuickCalculator
         /// <param name="tokenizer"></param> Collection of tokens that is parsed
         private void colorTokens(Evaluator evaluator)
         {
-            colorText(0, inputTextBox.Text.Length, Color.White, FontStyle.Regular);
+            // The only text that isn't a part of a token is for assignments, since the assignment operater and assignee variable are removed
+            colorText(0, inputTextBox.Text.Length, ASSIGNMENT, FontStyle.Regular);
             List<Token> tokens = evaluator.GetTokenizer().GetTokens();
             Color[] parenColors = { PAREN1, PAREN2, PAREN3};
             for (int i = 0; i < tokens.Count(); i++)
@@ -114,7 +121,7 @@ namespace QuickCalculator
                         colorText(tokenStart, tokenLength, OPERATOR, FontStyle.Regular);
                         break;
                     case 'v':
-                        colorText(tokenStart, tokenLength, SYMBOL, FontStyle.Regular);
+                        colorText(tokenStart, tokenLength, VARIABLE, FontStyle.Regular);
                         break;
                 }
             }

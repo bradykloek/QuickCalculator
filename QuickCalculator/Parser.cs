@@ -23,7 +23,6 @@ namespace QuickCalculator
         private double result;
         private Evaluator evaluator;
 
-
         /// <summary>
         /// Initializes a Parser using a completed Tokenizer object. This will parse and evaluate the tokens,
         /// and store the result in this.result.
@@ -121,6 +120,16 @@ namespace QuickCalculator
                 case '(':
                     i++;    // Skip ( token
                     value = ParseExpression();
+                    break;
+                case 'v':
+                    if (VariableTable.vars.Contains(token.GetToken()))
+                    {
+                        value = (double)VariableTable.vars[token.GetToken()];
+                    }
+                    else
+                    {
+                        evaluator.AddException("Undefined variable '" + token.GetToken() + "'.", token.GetStart(), token.GetEnd());
+                    }
                     break;
                 default:
                     // If the switch falls to the default, there was a token we didn't account for.

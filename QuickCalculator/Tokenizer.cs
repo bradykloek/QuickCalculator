@@ -230,6 +230,15 @@ namespace QuickCalculator
             {
                 checkParentheses();
             }
+
+            /* If an assignment operator = has been used, we will save the variable that is being assigned and send it to the evaluator.
+             * Then we will remove this variable and the assignment operator from the tokens so the rest of the expression can be parsed normally.
+             * We only do this if the Tokenizer hasn't encountered any errors.
+             */
+            if (hasAssignment && evaluator.GetExceptionCount() == 0)
+            {
+                prepareAssignment();
+            }
         }
 
         /// <summary>
@@ -264,6 +273,73 @@ namespace QuickCalculator
 
                 }
             }
+        }
+
+        private void prepareAssignment()
+        {
+            int assignmentIdx = 0;
+            int variableIdx;
+            for (; assignmentIdx < tokens.Count; assignmentIdx++)
+            {   // Find the assignment operator. It is known that there is only one because we checked that there aren't any exceptions.
+                if (tokens[assignmentIdx].GetToken().Equals("=")){ break; }
+            }
+            /*  Assignment can only take place at the beginning or end of the tokens list.
+             *  One operand must be a variable.
+             *  If both variables are defined, 
+             */
+
+            if (assignmentIdx == tokens.Count() - 1)
+            {   // Assignment operator is the last token
+                evaluator.AddException("Assignment needs two operands.", tokens[assignmentIdx].GetStart(), tokens[assignmentIdx].GetEnd());
+                return;
+            }
+
+            if  (assignmentIdx != 1     &&   assignmentIdx != tokens.Count() - 2)    // Assignment token is not second or second to last           
+            {
+                evaluator.AddException("Assignment can only be done to an isolated variable", tokens[assignmentIdx].GetStart(), tokens[assignmentIdx].GetEnd());
+                return;
+            }
+
+            Token prevToken = tokens[assignmentIdx - 1];
+            Token nextToken = tokens[assignmentIdx + 1];
+
+            if (prevToken.GetCategory() == 'v' && nextToken.GetCategory() == 'v') // If both are variables
+            {
+                if (VariableTable.vars.ContainsKey(nextToken.GetToken()))
+                {   // So long as next is defined, we assign prev <= next (leftward asignment by default)
+                    variableIdx = assignmentIdx - 1;
+                }
+                else if (VariableTable.vars.ContainsKey(prevToken.GetToken()))
+                {   // If next isn't defined but prev is, then we do rightward assignment - prev => next
+                    variableIdx = assignmentIdx + 1;
+                }
+                else
+                {   // Otherwise, neither are defined and we cannot successfully assign either
+                    evaluator.AddException("Cannot assign between two undefined variables.", prevToken.GetStart(), nextToken.GetEnd());
+                    return;
+                }
+
+            }
+            else if (prevToken.GetCategory() == 'v')
+            {   // prev is the token that will receive the assignment
+                variableIdx = assignmentIdx - 1;
+            }
+            else if (nextToken.GetCategory() == 'v')
+            {   // next is the token that will receive the assignment
+                variableIdx = assignmentIdx + 1;
+            }
+            else
+            {   // Neither operand is a variable
+                evaluator.AddException("At least one operand must be a variable for assignment", prevToken.GetStart(), nextToken.GetEnd());
+                return;
+            }
+
+            // Send the variable to the evaluator
+            evaluator.SetAssignVariable(tokens[variableIdx].GetToken());
+
+            // Removing from the List will shift indices. We need to remove the lowest index twice to remove the variable and the assignment operator
+            tokens.RemoveAt(Math.Min(assignmentIdx, variableIdx));
+            tokens.RemoveAt(Math.Min(assignmentIdx, variableIdx));
         }
     }
 }

@@ -8,6 +8,49 @@ namespace QuickCalculator
 {
     internal class Tokenizer
     {
+        private string input;
+        private bool throwExceptions;
+        private Token[] tokens;         // Holds all of the Tokens that are created
+        private List<TokenizerException> tokenizerExceptions;    // List that stores all exceptions that were encountered
+        private int tokenCount = 0;     // Stores how many tokens are in the tokens array
+
+        public Tokenizer(string input, bool throwExceptions)
+        {
+            this.input = input;
+            this.throwExceptions = throwExceptions;
+            tokenCount = 0;
+            tokens = new Token[input.Length + 1];
+            tokenizerExceptions = new List<TokenizerException>();
+
+            Tokenize();
+        }
+
+
+        public void AddToken(Token token)
+        {
+            if (tokenCount >= tokens.Length)
+            {
+                throw new IndexOutOfRangeException("Cannot add token. Tokenizer out of bounds.");
+            }
+
+            tokens[tokenCount] = token;
+            tokenCount++;
+        }
+
+        public Token[] GetTokens()
+        {
+            return tokens;
+        }
+
+        public List<TokenizerException> GetExceptions()
+        {
+            return tokenizerExceptions;
+        }
+
+        public int GetTokenCount()
+        {
+            return tokenCount;
+        }
 
         /// <summary>
         /// Converts an input string into a TokenCollection that stores Tokens
@@ -15,17 +58,15 @@ namespace QuickCalculator
         /// <param name="input"></param> Input string
         /// <param name="throwExceptions"></param> Boolean indicating whether exceptions should be thrown. 
         /// <returns></returns>
-        public static TokenCollection Tokenize(string input, bool throwExceptions)
+        private void Tokenize()
         {
 
             char[] operators = { '+', '-', '*', '/', '^', '%', '!', '=' };
             char[] validSymbols = { '.', ',', '(', ')'};
 
-            TokenCollection tokenCollection = new TokenCollection(input.Length);
-
             if (input.Length == 0)
             {
-                return tokenCollection;
+                return;
             }
 
 
@@ -46,7 +87,7 @@ namespace QuickCalculator
                 }
                 else if (!(Char.IsLetter(current) || Char.IsDigit(current) || validSymbols.Contains(current) || operators.Contains(current)))
                 { // Only letters, digits, and select symbols are valid
-                    TokenizerError("Invalid character '" + current + "'.",i, throwExceptions, tokenCollection);
+                    TokenizerError("Invalid character '" + current + "'.",i, throwExceptions);
                     continue;
                 }
 
@@ -81,7 +122,7 @@ namespace QuickCalculator
                             {
                                 if (hasAssignment)
                                 {
-                                    TokenizerError("Expression contains multiple assignment operators '='.", i, throwExceptions, tokenCollection);
+                                    TokenizerError("Expression contains multiple assignment operators '='.", i, throwExceptions);
                                 }
                                 hasAssignment = true;
                             }
@@ -90,16 +131,16 @@ namespace QuickCalculator
                         {
                             category = current;
 
-                            if (current == '(') tokenCollection.AddToken(new ParenToken(token, category, inputStart, i, parenLevel++));
+                            if (current == '(') AddToken(new ParenToken(token, category, inputStart, i, parenLevel++));
                             else
                             {
                                 if(parenLevel == 0)
                                 {
-                                    TokenizerError("Unopened closing parentheses.", i, throwExceptions, tokenCollection);
+                                    TokenizerError("Unopened closing parenthesis.", i, throwExceptions);
                                 }
                                 else
                                 {
-                                    tokenCollection.AddToken(new ParenToken(token, category, inputStart, i, --parenLevel));
+                                    AddToken(new ParenToken(token, category, inputStart, i, --parenLevel));
 
                                 }
                             }
@@ -110,7 +151,7 @@ namespace QuickCalculator
                         else
                         {
                             // Any other character is invalid for the start of a token
-                            TokenizerError("Invalid character '" + current + "' for start of token.", i, throwExceptions, tokenCollection);
+                            TokenizerError("Invalid character '" + current + "' for start of token.", i, throwExceptions);
                         }
                             break;
                     case 's':
@@ -138,7 +179,7 @@ namespace QuickCalculator
                         else if (current == '.')
                         {
                             if (hasDecimal) {
-                                TokenizerError("Number contains multiple decimal points.", i, throwExceptions, tokenCollection);
+                                TokenizerError("Number contains multiple decimal points.", i, throwExceptions);
                             }
                             else {
                                 hasDecimal = true;
@@ -154,15 +195,30 @@ namespace QuickCalculator
                         }
                         break;
                 }
-                tokenCollection.AddToken(new Token(token, category, inputStart, i));
+                AddToken(new Token(token, category, inputStart, i));
                 category = '\0'; // Change the category to indicate that we are starting a new token
                 token = "";
             }
             if (category == 's' || category == 'n') // If the last token is a symbol or number, it hasn't been added yet
             {
-                tokenCollection.AddToken(new Token(token, category, inputStart, input.Length));
+                AddToken(new Token(token, category, inputStart, input.Length));
             }
-            return tokenCollection;
+
+            // Check if all parentheses have been matched
+            if(parenLevel != 0)
+            {
+                Token[] tokens = GetTokens();
+                for (int i = 0; i < parenLevel; i++)
+                {
+                    for (int idx = 0; idx < GetTokenCount(); idx++)
+                    {
+                        if (tokens[idx].GetCategory() == '(')
+                        {
+                            TokenizerError("Unmatched open parenthesis.", tokens[idx].GetStart(), throwExceptions);
+                        }
+                    }
+                }
+            }
         }
 
         /// <summary>
@@ -172,9 +228,8 @@ namespace QuickCalculator
         /// <param name="message"></param> Error Message
         /// <param name="charIndex"></param> Index that caused the error
         /// <param name="throwException"></param> Boolean indicated whether an exceptions should be thrown or not
-        /// <param name="tokenCollection"></param> TokenCollection object that will store the error indices if !throwException
         /// <exception cref="TokenizerException"></exception>
-        private static void TokenizerError(string message, int charIndex, bool throwException, TokenCollection tokenCollection)
+        private void TokenizerError(string message, int charIndex, bool throwException)
         {
             TokenizerException exception = new TokenizerException(message, charIndex);
 
@@ -184,7 +239,7 @@ namespace QuickCalculator
             }
             else
             {
-                tokenCollection.TokenizerError(exception);  // Adds this exception to the list kept within tokenCollection
+                tokenizerExceptions.Add(exception);
             }
         }
     }

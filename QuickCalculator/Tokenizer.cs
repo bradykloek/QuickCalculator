@@ -8,16 +8,16 @@ namespace QuickCalculator
 {
     internal class Tokenizer
     {
-        private string input;
-        private bool throwExceptions;
-        private Token[] tokens;         // Holds all of the Tokens that are created
-        private List<TokenizerException> tokenizerExceptions;    // List that stores all exceptions that were encountered
-        private int tokenCount = 0;     // Stores how many tokens are in the tokens array
+        private string input;                   // The raw string input
+        private bool throwException;            // Whether we should throw exceptions or just store them
+        private Token[] tokens;                 // Stores the tokens that get created
+        private int tokenCount = 0;             // Number of tokens that get created
+        private List<TokenizerException> tokenizerExceptions;       // If we don't throw exceptions, they will be stored here
 
-        public Tokenizer(string input, bool throwExceptions)
+        public Tokenizer(string input, bool throwException)
         {
             this.input = input;
-            this.throwExceptions = throwExceptions;
+            this.throwException = throwException;
             tokenCount = 0;
             tokens = new Token[input.Length + 1];
             tokenizerExceptions = new List<TokenizerException>();
@@ -25,7 +25,11 @@ namespace QuickCalculator
             Tokenize();
         }
 
-
+        /// <summary>
+        /// Adds a new token to the tokens array
+        /// </summary>
+        /// <param name="token"></param>
+        /// <exception cref="IndexOutOfRangeException"></exception>
         public void AddToken(Token token)
         {
             if (tokenCount >= tokens.Length)
@@ -53,11 +57,10 @@ namespace QuickCalculator
         }
 
         /// <summary>
-        /// Converts an input string into a TokenCollection that stores Tokens
+        /// Takes in the input string to populate the tokens array.
+        /// If !throwExceptions, it will also fill the tokenizerExceptions list.
+        /// This is called from the constructor.
         /// </summary>
-        /// <param name="input"></param> Input string
-        /// <param name="throwExceptions"></param> Boolean indicating whether exceptions should be thrown. 
-        /// <returns></returns>
         private void Tokenize()
         {
 
@@ -87,7 +90,7 @@ namespace QuickCalculator
                 }
                 else if (!(Char.IsLetter(current) || Char.IsDigit(current) || validSymbols.Contains(current) || operators.Contains(current)))
                 { // Only letters, digits, and select symbols are valid
-                    TokenizerError("Invalid character '" + current + "'.",i, throwExceptions);
+                    TokenizerError("Invalid character '" + current + "'.",i);
                     continue;
                 }
 
@@ -122,7 +125,7 @@ namespace QuickCalculator
                             {
                                 if (hasAssignment)
                                 {
-                                    TokenizerError("Expression contains multiple assignment operators '='.", i, throwExceptions);
+                                    TokenizerError("Expression contains multiple assignment operators '='.", i);
                                 }
                                 hasAssignment = true;
                             }
@@ -136,7 +139,7 @@ namespace QuickCalculator
                             {
                                 if(parenLevel == 0)
                                 {
-                                    TokenizerError("Unopened closing parenthesis.", i, throwExceptions);
+                                    TokenizerError("Unopened closing parenthesis.", i);
                                 }
                                 else
                                 {
@@ -151,7 +154,7 @@ namespace QuickCalculator
                         else
                         {
                             // Any other character is invalid for the start of a token
-                            TokenizerError("Invalid character '" + current + "' for start of token.", i, throwExceptions);
+                            TokenizerError("Invalid character '" + current + "' for start of token.", i);
                         }
                             break;
                     case 's':
@@ -179,7 +182,7 @@ namespace QuickCalculator
                         else if (current == '.')
                         {
                             if (hasDecimal) {
-                                TokenizerError("Number contains multiple decimal points.", i, throwExceptions);
+                                TokenizerError("Number contains multiple decimal points.", i);
                             }
                             else {
                                 hasDecimal = true;
@@ -207,17 +210,7 @@ namespace QuickCalculator
             // Check if all parentheses have been matched
             if(parenLevel != 0)
             {
-                Token[] tokens = GetTokens();
-                for (int i = 0; i < parenLevel; i++)
-                {
-                    for (int idx = 0; idx < GetTokenCount(); idx++)
-                    {
-                        if (tokens[idx].GetCategory() == '(')
-                        {
-                            TokenizerError("Unmatched open parenthesis.", tokens[idx].GetStart(), throwExceptions);
-                        }
-                    }
-                }
+                checkParentheses();
             }
         }
 
@@ -226,10 +219,9 @@ namespace QuickCalculator
         /// index that caused the error in errorIndices, depending on how the Tokinize() call is being used.
         /// </summary>
         /// <param name="message"></param> Error Message
-        /// <param name="charIndex"></param> Index that caused the error
-        /// <param name="throwException"></param> Boolean indicated whether an exceptions should be thrown or not
+        /// <param name="charIndex"></param> Index of the input string that caused the error
         /// <exception cref="TokenizerException"></exception>
-        private void TokenizerError(string message, int charIndex, bool throwException)
+        private void TokenizerError(string message, int charIndex)
         {
             TokenizerException exception = new TokenizerException(message, charIndex);
 
@@ -240,6 +232,40 @@ namespace QuickCalculator
             else
             {
                 tokenizerExceptions.Add(exception);
+            }
+        }
+
+        /// <summary>
+        /// Finds which open parentheses tokens are unmatched by a closing parentheses at the same level.
+        /// This method is only called after it is known that there is at least one unmatched parenthesis
+        /// </summary>
+        private void checkParentheses()
+        {
+            for(int i = 0; i < tokenCount; i++)
+            {
+                bool matched = false;
+                if (tokens[i].GetCategory() == '(')
+                {
+                    ParenToken openParen = (ParenToken)tokens[i];
+                    for(int j = i+1; j < tokenCount; j++)
+                    {
+                        if (tokens[j].GetCategory() == ')')
+                        {
+                            ParenToken closeParen = (ParenToken)tokens[j];
+                            if(openParen.GetLevel() == closeParen.GetLevel())
+                            {
+                                matched = true;
+                                break;
+                            }
+                        }
+                    }
+
+                    if (!matched)
+                    {
+                        TokenizerError("Unmatched open parenthesis.", openParen.GetStart());
+                    }
+
+                }
             }
         }
     }

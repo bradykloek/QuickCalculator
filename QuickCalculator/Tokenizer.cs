@@ -10,38 +10,22 @@ namespace QuickCalculator
     {
         private string input;                   // The raw string input
         private bool throwException;            // Whether we should throw exceptions or just store them
-        private Token[] tokens;                 // Stores the tokens that get created
-        private int tokenCount = 0;             // Number of tokens that get created
+        private List<Token> tokens;                 // Stores the tokens that get created
         private List<TokenizerException> tokenizerExceptions;       // If we don't throw exceptions, they will be stored here
 
         public Tokenizer(string input, bool throwException)
         {
             this.input = input;
             this.throwException = throwException;
-            tokenCount = 0;
-            tokens = new Token[input.Length + 1];
+            tokens = new List<Token>(input.Length / 2);
+            // Starts tokens with a capacity of 50% of input.Length to avoid the initial resizings which would almost always occur
             tokenizerExceptions = new List<TokenizerException>();
 
             Tokenize();
         }
 
-        /// <summary>
-        /// Adds a new token to the tokens array
-        /// </summary>
-        /// <param name="token"></param>
-        /// <exception cref="IndexOutOfRangeException"></exception>
-        public void AddToken(Token token)
-        {
-            if (tokenCount >= tokens.Length)
-            {
-                throw new IndexOutOfRangeException("Cannot add token. Tokenizer out of bounds.");
-            }
 
-            tokens[tokenCount] = token;
-            tokenCount++;
-        }
-
-        public Token[] GetTokens()
+        public List<Token> GetTokens()
         {
             return tokens;
         }
@@ -49,11 +33,6 @@ namespace QuickCalculator
         public List<TokenizerException> GetExceptions()
         {
             return tokenizerExceptions;
-        }
-
-        public int GetTokenCount()
-        {
-            return tokenCount;
         }
 
         /// <summary>
@@ -65,7 +44,7 @@ namespace QuickCalculator
         {
 
             char[] operators = { '+', '-', '*', '/', '^', '%', '!', '=' };
-            char[] validSymbols = { '.', ',', '(', ')'};
+            char[] validSymbols = { '.', ',', '(', ')', '[', ']'};
 
             if (input.Length == 0)
             {
@@ -84,6 +63,7 @@ namespace QuickCalculator
             for (int i = 0; i < input.Length; i++)
             {
                 current = input[i];
+                bool implicitMultiplication = false;
 
                 if (current.Equals(' ')) { // Whitespace is ignored entirely-- even for symbol names and numbers
                     continue;
@@ -100,10 +80,11 @@ namespace QuickCalculator
                         token += current;
                         inputStart = i;
 
-                        // If the token starts with a letter, then it is a Variable or Function, collectively called a Symbol
+                        /* If the token starts with a letter, then it is a Variable or Function. It will be marked as a variable
+                         * and stay as such unless a [ is found indicating it is a function */
                         if (Char.IsLetter(current))
                         {
-                            category = 's'; // s indicates Symbol
+                            category = 'v'; // v indicates Variable
                             continue;
                         }
 
@@ -134,16 +115,16 @@ namespace QuickCalculator
                         {
                             category = current;
 
-                            if (current == '(') AddToken(new ParenToken(token, category, inputStart, i, parenLevel++));
+                            if (current == '(') tokens.Add(new ParenToken(token, category, inputStart, i, parenLevel++));
                             else
                             {
                                 if(parenLevel == 0)
                                 {
-                                    TokenizerError("Unopened closing parenthesis.", i);
+                                    TokenizerError("Unmatched closing parenthesis.", i);
                                 }
                                 else
                                 {
-                                    AddToken(new ParenToken(token, category, inputStart, i, --parenLevel));
+                                    tokens.Add(new ParenToken(token, category, inputStart, i, --parenLevel));
 
                                 }
                             }
@@ -157,14 +138,20 @@ namespace QuickCalculator
                             TokenizerError("Invalid character '" + current + "' for start of token.", i);
                         }
                             break;
-                    case 's':
+                    case 'v':
                         // This character continues the token if it is a letter or digit
                         if (Char.IsLetter(current) || Char.IsDigit(current))
                         {
                             token += current;
                             continue;
                         }
-                        /*  If not, then the current token ends and we will start a new one.
+
+                        if(current == '[')
+                        {
+                            category = 'f'; // If we encounter a [, this indicates this variable is actually a function
+                        }
+
+                        /*  The current token ends and we will start a new one.
                             *  We must move the counter (i) back so the loop will check the current character again */
                         i--;
                         break;
@@ -175,16 +162,18 @@ namespace QuickCalculator
                             token += current;
                             continue;
                         }
-                        else if(current == ',')
+                        else if (current == ',')
                         {
                             continue; // Commas can be in numbers and are simply ignored
                         }
                         else if (current == '.')
                         {
-                            if (hasDecimal) {
+                            if (hasDecimal)
+                            {
                                 TokenizerError("Number contains multiple decimal points.", i);
                             }
-                            else {
+                            else
+                            {
                                 hasDecimal = true;
                                 token += current;
                                 continue;
@@ -192,19 +181,31 @@ namespace QuickCalculator
                         }
                         else
                         {
-                        /*  If none of the above, then the current token ends and we will start a new one.
-                        *  We must move the counter (i) back so the loop will check the current character again */
+                            /*  If none of the above, then the current token ends and we will start a new one.
+                            *  We must move the counter (i) back so the loop will check the current character again */
                             i--;
+
+                            if (current == '(')
+                            {
+                                /*  If we encounter a parenthesis immediately following the number token, it is interpreted
+                                *   as implicit multiplication */
+                                implicitMultiplication = true;
+                            }
                         }
                         break;
                 }
-                AddToken(new Token(token, category, inputStart, i));
+                tokens.Add(new Token(token, category, inputStart, i));
+                if (implicitMultiplication)
+                {
+                    // If implicit multiplication was detected, add a * token
+                    tokens.Add(new Token("*", 'o', i, i));
+                }
                 category = '\0'; // Change the category to indicate that we are starting a new token
                 token = "";
             }
-            if (category == 's' || category == 'n') // If the last token is a symbol or number, it hasn't been added yet
+            if (category == 'v' || category == 'n' || category == 'f') // If the last token is a symbol, number, or function, it hasn't been added yet
             {
-                AddToken(new Token(token, category, inputStart, input.Length));
+                tokens.Add(new Token(token, category, inputStart, input.Length));
             }
 
             // Check if all parentheses have been matched
@@ -241,13 +242,13 @@ namespace QuickCalculator
         /// </summary>
         private void checkParentheses()
         {
-            for(int i = 0; i < tokenCount; i++)
+            for(int i = 0; i < tokens.Count(); i++)
             {
                 bool matched = false;
                 if (tokens[i].GetCategory() == '(')
                 {
                     ParenToken openParen = (ParenToken)tokens[i];
-                    for(int j = i+1; j < tokenCount; j++)
+                    for(int j = i+1; j < tokens.Count(); j++)
                     {
                         if (tokens[j].GetCategory() == ')')
                         {

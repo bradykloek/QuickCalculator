@@ -32,7 +32,8 @@ namespace QuickCalculator
                 Tokenizer tokenizer = new Tokenizer(inputTextBox.Text, false);
                 if(tokenizer.GetExceptions().Count() == 0)
                 {
-                    System.Windows.Forms.MessageBox.Show(string.Join(" ", (object[])tokenizer.GetTokens()));
+                    //System.Windows.Forms.MessageBox.Show(string.Join(" ", tokenizer.GetTokens()));
+                    System.Windows.Forms.MessageBox.Show(new Parser(tokenizer).ToString());
 
                 }
                 else
@@ -91,9 +92,9 @@ namespace QuickCalculator
         /// <param name="tokenizer"></param> Collection of tokens that is parsed
         private void colorTokens(Tokenizer tokenizer)
         {
-            Token[] tokens = tokenizer.GetTokens();
+            List<Token> tokens = tokenizer.GetTokens();
             Color[] parenColors = { PAREN1, PAREN2, PAREN3};
-            for (int i = 0; i < tokenizer.GetTokenCount(); i++)
+            for (int i = 0; i < tokens.Count(); i++)
             {
                 int tokenStart = tokens[i].GetStart();
                 int tokenLength = tokens[i].GetEnd() - tokenStart ; // Exclusive on right, so -1
@@ -110,7 +111,7 @@ namespace QuickCalculator
                     case 'o':
                         colorText(tokenStart, 1, OPERATOR, FontStyle.Regular);
                         break;
-                    case 's':
+                    case 'v':
                         colorText(tokenStart, tokenLength, SYMBOL, FontStyle.Regular);
                         break;
                 }

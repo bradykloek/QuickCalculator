@@ -127,6 +127,8 @@ namespace QuickCalculator
                     case 'f':
                     case '[':
                     case ']':
+                    case ',':
+                        // All of these tokens are only found in functions
                         colorText(tokenStart, tokenLength, FUNCTION, FontStyle.Regular);
                         break;
                 }

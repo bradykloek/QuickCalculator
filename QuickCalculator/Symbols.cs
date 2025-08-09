@@ -17,8 +17,13 @@ namespace QuickCalculator
         public static Hashtable functions = new Hashtable
         {
             {"square", new Function(1, 
-                                        x => x[0] * x[1]    
-                                    )}
+                                        x => x[0] * x[0]    
+            )},
+
+                        {"mult", new Function(2,
+                                        x => x[0] * x[1] + 1
+            )}
         };
+
     }
 }

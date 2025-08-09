@@ -23,7 +23,7 @@ namespace QuickCalculator
             tokenizer = new Tokenizer(input, this);
             if (exceptions.Count() == 0)
             {
-                parser = new Parser(tokenizer, this);
+                parser = new Parser(tokenizer.GetTokens(), this);
                 result = parser.GetResult();
             }
         }
@@ -31,6 +31,11 @@ namespace QuickCalculator
         public double GetResult()
         {
             return result;
+        }
+
+        public bool GetThrowExceptions()
+        {
+            return throwExceptions;
         }
 
         public int GetExceptionCount()

@@ -202,6 +202,11 @@ namespace QuickCalculator
                 TokenizeBracket();
                 return true;
             }
+            else if (current == ',' && functionLevel > 0)   // ',' only makes a token if we are parsing the arguments of a function
+            {
+                addToken = new LevelToken(",", ',', currentIndex, currentIndex + 1, functionLevel);
+                return true;
+            }
             else
             {
                 // Any other character is invalid for the start of a token
@@ -271,7 +276,7 @@ namespace QuickCalculator
             if (current == '[')
             {
                 // If we encounter a [, this indicates this variable is actually a function
-                addToken = new LevelToken(token, 'f', tokenStart, currentIndex, functionLevel++);
+                addToken = new FunctionToken(token, 'f', tokenStart, currentIndex, functionLevel++);
             }
 
             /*  The current token ends and we will start a new one.
@@ -339,7 +344,7 @@ namespace QuickCalculator
 
             if (current == '[')
             {
-                if (currentIndex == 0 || tokens[currentIndex - 1].GetCategory() != 'f')
+                if (currentIndex == 0 || tokens[tokens.Count() - 1].GetCategory() != 'f')
                 {   // Brackets can only occur after a function token
                     evaluator.AddException("'[' must immediately follow a function name.", currentIndex, currentIndex + 1);
                 }

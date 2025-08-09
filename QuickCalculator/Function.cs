@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -24,6 +25,7 @@ namespace QuickCalculator
 
         public double Execute(List<double> args)
         {
+            Debug.WriteLine(args.Count());
             return function(args);
         }
     }

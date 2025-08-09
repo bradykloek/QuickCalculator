@@ -17,23 +17,21 @@ namespace QuickCalculator
     /// </summary>
     internal class Parser
     {
-        private Tokenizer tokenizer;
         private List<Token> tokens;
-        private int i;
+        private int currentIndex;
         private double result;
         private Evaluator evaluator;
 
         /// <summary>
-        /// Initializes a Parser using a completed Tokenizer object. This will parse and evaluate the tokens,
+        /// Initializes a Parser using a completed token list. This will parse and evaluate the tokens,
         /// and store the result in this.result.
         /// </summary>
-        /// <param name="tokenizer"></param>
-        public Parser(Tokenizer tokenizer, Evaluator evaluator)
+        /// <param name="tokens"></param>
+        public Parser(List<Token> tokens, Evaluator evaluator)
         {
             this.evaluator = evaluator;
-            this.tokenizer = tokenizer;
-            tokens = tokenizer.GetTokens();
-            i = 0;
+            this.tokens = tokens;
+            currentIndex = 0;
             result = ParseExpression();
         }
 
@@ -44,18 +42,18 @@ namespace QuickCalculator
         /// <returns></returns>
         public bool MatchToken(string matchWith)
         {
-            if (i >= tokens.Count) return false;
-            return tokens[i].GetToken().Equals(matchWith);
+            if (currentIndex >= tokens.Count) return false;
+            return tokens[currentIndex].GetToken().Equals(matchWith);
         }
 
         private double ParseExpression()
         {
-            if (tokenizer.GetTokens().Count() == 0) return 0;
+            if (tokens.Count() == 0) return 0;
             double left = ParseTerm();
             while (MatchToken("+") || MatchToken("-"))
             {
-                string op = tokens[i].GetToken();
-                i++; // Move past operator
+                string op = tokens[currentIndex].GetToken();
+                currentIndex++; // Move past operator
                 double right = ParseTerm();
                 left = op.Equals("+") ? left + right : left - right;
             }
@@ -67,8 +65,8 @@ namespace QuickCalculator
             double left = ParseFactor();
             while (MatchToken("*") || MatchToken("/") || MatchToken("%") || MatchToken("//"))
             {
-                string op = tokens[i].GetToken();
-                i++; // Move past operator
+                string op = tokens[currentIndex].GetToken();
+                currentIndex++; // Move past operator
                 double right = ParseFactor();
                 switch (op)
                 {
@@ -98,7 +96,7 @@ namespace QuickCalculator
             double left = ParsePrimary();
             while (MatchToken("^"))
             {
-                i++; // Move past operator
+                currentIndex++; // Move past operator
                 double right = ParseFactor();
                 left = Math.Pow(left, right);
             }
@@ -107,22 +105,22 @@ namespace QuickCalculator
 
         private double ParsePrimary()
         {
-            if (i >= tokens.Count())
+            if (currentIndex >= tokens.Count())
             {
                 // If we have gone out of bounds of the Token List, there was an operator at the end of the string which thus didn't have enough operands
-                Token prevToken = tokens[i - 1];
+                Token prevToken = tokens[currentIndex - 1];
                 evaluator.AddException("Input ends with operator '" + prevToken.GetToken() + "', which does not have enough operands.", prevToken.GetStart(), prevToken.GetEnd());
                 return 0;
             }
-            Token token = tokens[i];
+            Token token = tokens[currentIndex];
             double value = 0;
             switch (token.GetCategory())
             {
                 case 'n':
-                    value = Double.Parse(tokens[i].GetToken());
+                    value = Double.Parse(tokens[currentIndex].GetToken());
                     break;
                 case '(':
-                    i++;    // Skip ( token
+                    currentIndex++;    // Skip ( token
                     value = ParseExpression();
                     break;
                 case 'v':
@@ -136,13 +134,25 @@ namespace QuickCalculator
                     }
                     break;
                 case 'f':
-                    if (Symbols.variables.Contains(token.GetToken()))
-                    {
-                        value = (double)Symbols.variables[token.GetToken()];
-                    }
+                    FunctionToken functionToken = (FunctionToken)tokens[currentIndex];
+                    if (!ParseFunction(functionToken)) return 0;
+                    if (!Symbols.functions.Contains(token.GetToken()))
+                        evaluator.AddException("Undefined function '" + token.GetToken() + "'.", token.GetStart(), token.GetEnd());
                     else
                     {
-                        evaluator.AddException("Undefined variable '" + token.GetToken() + "'.", token.GetStart(), token.GetEnd());
+                        Function function = (Function)Symbols.functions[token.GetToken()];
+                        List<double> args = functionToken.GetArgs();
+                        int actualArgCount = args.Count();
+                        int expectedArgCount = function.GetNumArgs();
+                        if (actualArgCount != expectedArgCount)
+                            evaluator.AddException( "Function '" + token.GetToken() + "' requires " + 
+                                                    expectedArgCount + " arguments, received " + actualArgCount + ".",
+                                                    functionToken.GetStart(), functionToken.GetEnd());
+                        else
+                        {
+                            value = function.Execute(args);
+                        }
+
                     }
                     break;
                 default:
@@ -150,8 +160,45 @@ namespace QuickCalculator
                     evaluator.AddException("Encountered an unexpected token '" + token.GetToken() + "'.", token.GetStart(), token.GetEnd());
                     break;
             }
-            i++;
+            currentIndex++;
             return value;
+        }
+
+        private bool ParseFunction(FunctionToken functionToken)
+        {
+            currentIndex += 2;  // Move past '['
+            List<Token> argumentTokens = new List<Token>();
+            while (currentIndex < tokens.Count() && tokens[currentIndex].GetCategory() != ']')
+            {
+                if (tokens[currentIndex].GetCategory() == ',')
+                {
+                    Parser parseArg = new Parser(argumentTokens, evaluator);
+                    // Parse this argument. Any errors will be added to the same evaluator
+
+                    functionToken.AddArg(parseArg.GetResult());
+                    argumentTokens = new List<Token>();
+                }
+                else
+                {
+                    argumentTokens.Add(tokens[currentIndex]);
+                }
+                currentIndex++;
+            }
+
+            if (currentIndex >= tokens.Count())
+            {
+                evaluator.AddException("Unmatched open bracket.", currentIndex - 1, currentIndex - 1);
+                return false;
+            }
+
+            if (argumentTokens.Count() > 0)
+            {   // Add the last argument
+                Parser parseArg = new Parser(argumentTokens, evaluator);
+                functionToken.AddArg(parseArg.GetResult());
+                currentIndex++;
+            }
+
+            return true;
         }
 
 
@@ -165,7 +212,7 @@ namespace QuickCalculator
             StringBuilder sb = new StringBuilder();
             for (int x = 0; x < tokens.Count(); x++)
             {
-                if (x == i)
+                if (x == currentIndex)
                 {
                     sb.Append(" <" + tokens[x].ToString() + "> ");
                 }

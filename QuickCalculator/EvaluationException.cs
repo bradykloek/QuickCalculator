@@ -10,13 +10,15 @@ namespace QuickCalculator
     {
         private int startIndex;
         private int endIndex;
+        private char source;
         public EvaluationException() { }
         public EvaluationException(string message) : base(message) { }
 
-        public EvaluationException(string message, int start, int end) : base(message)
+        public EvaluationException(string message, int start, int end, char source) : base(message)
         {
             startIndex = start;
             endIndex = end;
+            this.source = source;
         }
 
         public int GetStart()
@@ -29,9 +31,13 @@ namespace QuickCalculator
             return endIndex;
         }
 
+        public char GetSource()
+        {
+            return source;
+        }
         public override string ToString()
         {
-            return "[" + startIndex + "] " + base.Message;
+            return "[" + startIndex + "] " + base.Message + " (" + source + ")";
         }
 
     }

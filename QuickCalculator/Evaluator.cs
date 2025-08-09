@@ -10,16 +10,16 @@ namespace QuickCalculator
     internal class Evaluator
     {
         private List<EvaluationException> exceptions;       // If we don't throw exceptions, they will be stored here
-        private bool throwExceptions;
+        private bool executeFunctions;
         private double result;
         private Tokenizer tokenizer;
         private Parser parser;
         private string assignVariable = "";
 
-        public Evaluator(string input, bool throwExceptions)
+        public Evaluator(string input, bool executeFunctions)
         {
             exceptions = new List<EvaluationException>(input.Length / 2);
-            this.throwExceptions = throwExceptions;
+            this.executeFunctions = executeFunctions;
             tokenizer = new Tokenizer(input, this);
             if (exceptions.Count() == 0)
             {
@@ -33,9 +33,9 @@ namespace QuickCalculator
             return result;
         }
 
-        public bool GetThrowExceptions()
+        public bool GetExecuteFunctions()
         {
-            return throwExceptions;
+            return executeFunctions;
         }
 
         public int GetExceptionCount()
@@ -79,18 +79,9 @@ namespace QuickCalculator
         /// <param name="message"></param> Error Message
         /// <param name="charIndex"></param> Index of the input string that caused the error
         /// <exception cref="EvaluationException"></exception>
-        public void AddException(string message, int start, int end)
+        public void AddException(string message, int start, int end, char source)
         {
-            EvaluationException exception = new EvaluationException(message, start, end);
-
-            if (throwExceptions)
-            {
-                throw exception;
-            }
-            else
-            {
-                exceptions.Add(exception);
-            }
+            exceptions.Add(new EvaluationException(message, start, end, source));
         }
 
 

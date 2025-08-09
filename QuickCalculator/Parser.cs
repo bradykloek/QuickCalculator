@@ -109,7 +109,7 @@ namespace QuickCalculator
             {
                 // If we have gone out of bounds of the Token List, there was an operator at the end of the string which thus didn't have enough operands
                 Token prevToken = tokens[currentIndex - 1];
-                evaluator.AddException("Input ends with operator '" + prevToken.GetToken() + "', which does not have enough operands.", prevToken.GetStart(), prevToken.GetEnd());
+                evaluator.AddException("Input ends with operator '" + prevToken.GetToken() + "', which does not have enough operands.", prevToken.GetStart(), prevToken.GetEnd(), 'P');
                 return 0;
             }
             Token token = tokens[currentIndex];
@@ -130,14 +130,14 @@ namespace QuickCalculator
                     }
                     else
                     {
-                        evaluator.AddException("Undefined variable '" + token.GetToken() + "'.", token.GetStart(), token.GetEnd());
+                        evaluator.AddException("Undefined variable '" + token.GetToken() + "'.", token.GetStart(), token.GetEnd(), 'P');
                     }
                     break;
                 case 'f':
                     FunctionToken functionToken = (FunctionToken)tokens[currentIndex];
                     if (!ParseFunction(functionToken)) return 0;
                     if (!Symbols.functions.Contains(token.GetToken()))
-                        evaluator.AddException("Undefined function '" + token.GetToken() + "'.", token.GetStart(), token.GetEnd());
+                        evaluator.AddException("Undefined function '" + token.GetToken() + "'.", token.GetStart(), token.GetEnd(), 'P');
                     else
                     {
                         Function function = (Function)Symbols.functions[token.GetToken()];
@@ -147,17 +147,17 @@ namespace QuickCalculator
                         if (actualArgCount != expectedArgCount)
                             evaluator.AddException( "Function '" + token.GetToken() + "' requires " + 
                                                     expectedArgCount + " arguments, received " + actualArgCount + ".",
-                                                    functionToken.GetStart(), functionToken.GetEnd());
+                                                    functionToken.GetStart(), functionToken.GetEnd(), 'P');
                         else
                         {
-                            value = function.Execute(args);
+                            value = evaluator.GetExecuteFunctions() ? function.Execute(args) : 1;
                         }
 
                     }
                     break;
                 default:
                     // If the switch falls to the default, there was a token we didn't account for.
-                    evaluator.AddException("Encountered an unexpected token '" + token.GetToken() + "'.", token.GetStart(), token.GetEnd());
+                    evaluator.AddException("Encountered an unexpected token '" + token.GetToken() + "'.", token.GetStart(), token.GetEnd(), 'P');
                     break;
             }
             currentIndex++;
@@ -190,7 +190,7 @@ namespace QuickCalculator
 
             if (currentIndex >= tokens.Count())
             {
-                evaluator.AddException("Unmatched open bracket.", currentIndex - 1, currentIndex - 1);
+                evaluator.AddException("Unmatched open bracket.", currentIndex - 1, currentIndex - 1, 'P');
                 return false;
             }
 

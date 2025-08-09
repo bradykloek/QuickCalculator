@@ -205,7 +205,7 @@ namespace QuickCalculator
             else
             {
                 // Any other character is invalid for the start of a token
-                evaluator.AddException("Invalid character '" + current + "' for start of token.", currentIndex, currentIndex + 1);
+                evaluator.AddException("Invalid character '" + current + "' for start of token.", currentIndex, currentIndex + 1, 'T');
                 tokenFinished = true;
             }
             ImplicitMultiplication();   // We need to check for implicit multiplication at the end of this function so the current token is categorized
@@ -232,7 +232,7 @@ namespace QuickCalculator
             {
                 if (hasDecimal)
                 {
-                    evaluator.AddException("Number contains multiple decimal points.", currentIndex, currentIndex + 1);
+                    evaluator.AddException("Number contains multiple decimal points.", currentIndex, currentIndex + 1, 'T');
                 }
                 else
                 {
@@ -283,18 +283,26 @@ namespace QuickCalculator
         {
             /* Before checking the other operators, we first must handle a special case for '-' 
              * to check if it should be the unary negation operator instead of subtraction.     */
-            if (current == '-'  && (tokens.Count() == 0 || tokens[tokens.Count() - 1].GetCategory() == 'o'))
-            {   // If this is the first token or the previous token was an operator, it is unary 
-                category = 'n';     // It should be interpreted as a number isntead of an operator
-                token = "-0";       // Change token to avoid it causing errors when it is parsed as a double
-                return false;   
+            if (current == '-') {
+                char prevCategory = tokens.Count() > 0 ? tokens[tokens.Count - 1].GetCategory() : '\0';
+                switch (prevCategory)
+                {
+                    case '\0':
+                    case 'o':
+                    case '(':
+                    case '[':
+                        category = 'n';     // It should be interpreted as a number isntead of an operator
+                        token = "-0";       // Change token to avoid it causing errors when it is parsed as a double
+                        return false;
+                }
+ 
             }
 
             if (current == '=')
             {
                 if (hasAssignment)
                 {
-                    evaluator.AddException("Expression contains multiple assignment operators '='.", currentIndex, currentIndex + 1);
+                    evaluator.AddException("Expression contains multiple assignment operators '='.", currentIndex, currentIndex + 1, 'T');
                 }
                 hasAssignment = true;
             }
@@ -322,8 +330,8 @@ namespace QuickCalculator
             {
                 if (parenLevel < 0)
                 {
-                    evaluator.AddException("Unmatched closing parenthesis.", currentIndex, currentIndex + 1);
-                    parenLevel = 0;   // This is to avoid letting parenLevel be negative when the token is added, which would cause errores elsewhere
+                    evaluator.AddException("Unmatched closing parenthesis.", currentIndex, currentIndex + 1, 'T');
+                    parenLevel = 0;   // Avoid letting parenLevel be negative when the token is added, which would cause errores elsewhere
                 }
                 addToken = new LevelToken(token, category, tokenStart, currentIndex, parenLevel--);
             }
@@ -334,9 +342,10 @@ namespace QuickCalculator
 
             if (current == '[')
             {
-                if (currentIndex == 0 || tokens[tokens.Count() - 1].GetCategory() != 'f')
+                if (tokens.Count() == 0 || tokens[tokens.Count() - 1].GetCategory() != 'f')
                 {   // Brackets can only occur after a function token
-                    evaluator.AddException("'[' must immediately follow a function name.", currentIndex, currentIndex + 1);
+                    evaluator.AddException("'[' must immediately follow a function name.", currentIndex, currentIndex + 1, 'T');
+                    functionLevel = 0; // Avoid letting parenLevel be negative when the token is added, which would cause errores elsewhere
                 }
                 addToken = new LevelToken(token, category, tokenStart, currentIndex + 1, functionLevel);
                 // Don't increment functionLevel here because the intiial function token 
@@ -345,7 +354,7 @@ namespace QuickCalculator
             {
                 if (functionLevel == -1)
                 {
-                    evaluator.AddException("Unmatched closing bracket.", currentIndex, currentIndex + 1);
+                    evaluator.AddException("Unmatched closing bracket.", currentIndex, currentIndex + 1, 'T');
                     functionLevel = 0;  /* To avoid a negative functionLevel, which could cause errors elsewhere
                                          *  (namely when we attempt to color the token, which doesn't matter since it
                                          *  will be red due to the exception anyway) */
@@ -381,7 +390,7 @@ namespace QuickCalculator
 
                     if (!matched)
                     {
-                        evaluator.AddException("Unmatched open parenthesis.", openParen.GetStart(), openParen.GetEnd());
+                        evaluator.AddException("Unmatched open parenthesis.", openParen.GetStart(), openParen.GetEnd(), 'T');
                     }
 
                 }
@@ -430,13 +439,13 @@ namespace QuickCalculator
 
             if (assignmentIdx == tokens.Count() - 1)
             {   // Assignment operator is the last token
-                evaluator.AddException("Assignment needs two operands.", tokens[assignmentIdx].GetStart(), tokens[assignmentIdx].GetEnd());
+                evaluator.AddException("Assignment needs two operands.", tokens[assignmentIdx].GetStart(), tokens[assignmentIdx].GetEnd(), 'T');
                 return;
             }
 
             if  (assignmentIdx != 1     &&   assignmentIdx != tokens.Count() - 2)    // Assignment token is not second or second to last           
             {
-                evaluator.AddException("Assignment can only be done to an isolated variable", tokens[assignmentIdx].GetStart(), tokens[assignmentIdx].GetEnd());
+                evaluator.AddException("Assignment can only be done to an isolated variable", tokens[assignmentIdx].GetStart(), tokens[assignmentIdx].GetEnd(), 'T');
                 return;
             }
 
@@ -455,7 +464,7 @@ namespace QuickCalculator
                 }
                 else
                 {   // Otherwise, neither are defined and we cannot successfully assign either
-                    evaluator.AddException("Cannot assign between two undefined variables.", prevToken.GetStart(), nextToken.GetEnd());
+                    evaluator.AddException("Cannot assign between two undefined variables.", prevToken.GetStart(), nextToken.GetEnd(), 'T');
                     return;
                 }
 
@@ -470,7 +479,7 @@ namespace QuickCalculator
             }
             else
             {   // Neither operand is a variable
-                evaluator.AddException("At least one operand must be a variable for assignment", prevToken.GetStart(), nextToken.GetEnd());
+                evaluator.AddException("At least one operand must be a variable for assignment", prevToken.GetStart(), nextToken.GetEnd(), 'T');
                 return;
             }
 

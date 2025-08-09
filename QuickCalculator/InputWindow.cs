@@ -35,7 +35,7 @@ namespace QuickCalculator
             {
                 e.SuppressKeyPress = true;
 
-                Evaluator evaluator = new Evaluator(inputTextBox.Text, false);
+                Evaluator evaluator = new Evaluator(inputTextBox.Text, true);
 
                 if (evaluator.GetExceptionCount() == 0)
                 {

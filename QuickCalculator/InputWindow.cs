@@ -38,6 +38,7 @@ namespace QuickCalculator
                 {
 
                     System.Windows.Forms.MessageBox.Show(evaluator.ToString());
+                    Debug.WriteLine(evaluator.GetTokenizer().ToString());
                     if (evaluator.GetAssignVariable() != "")
                     {   // If parser encountered no errors and a variable is to be assigned
                         Symbols.variables[evaluator.GetAssignVariable()] = evaluator.GetResult();
@@ -128,7 +129,7 @@ namespace QuickCalculator
                     case '[':
                     case ']':
                     case ',':
-                        // All of these tokens are only found in functions
+                        // All of these tokens are only found in function calls
                         colorText(tokenStart, tokenLength, FUNCTION, FontStyle.Regular);
                         break;
                 }

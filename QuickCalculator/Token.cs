@@ -6,6 +6,9 @@ using System.Threading.Tasks;
 
 namespace QuickCalculator
 {
+    /// <summary>
+    /// Represents an individual token of information. Tokenizer parses an input string to convert it into a list of Tokens.
+    /// </summary>
     internal class Token
     {
         private string token; // String representing the contents of a single token

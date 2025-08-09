@@ -65,7 +65,6 @@ namespace QuickCalculator
 
         public void SetAssignVariable(string variableName)
         {
-            Debug.WriteLine("ASSIGN!");
             assignVariable = variableName;
         }
 

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -19,7 +20,7 @@ namespace QuickCalculator
         int parenLevel = 0;             // Current level of parenthesization
         int functionLevel = 0;          // Current level of function nesting
         bool hasDecimal;                // Current number token contains a decimal
-        bool implicitMultiplication;    // Detected implicit multiplication
+        bool preImplicitMultiplication;    // Detected implicit multiplication
         Token addToken;                 /* Stores a token that was initialized somewhere other than the end of the Tokenize() loop
                                          * (this is used for creating tokens of a different subclass that hold extra information) */
         
@@ -109,7 +110,7 @@ namespace QuickCalculator
                 switch (category)
                 {
                     case '\0': // If a category hasn't yet been determined, we need to start with 
-                        implicitMultiplication = false;
+                        preImplicitMultiplication = false;
                         hasDecimal = false;
                         if (StartToken()) break;
                         else continue;
@@ -123,11 +124,6 @@ namespace QuickCalculator
                 
                 AddToken(new Token(token, category, tokenStart, currentIndex + 1));
 
-                if (implicitMultiplication)
-                {
-                    // If implicit multiplication was detected, add a * token (of length 0)
-                    AddToken(new Token("*", 'o', currentIndex, currentIndex));
-                }
                 category = '\0'; // Change the category to indicate that we are starting a new token
                 token = "";
             }
@@ -162,13 +158,14 @@ namespace QuickCalculator
         {
             token += current;
             tokenStart = currentIndex;
+            bool tokenFinished;
 
             /* If the token starts with a letter, then it is a Variable or Function. It will be marked as a variable
              * and stay as such unless a [ is found indicating it is a function */
             if (Char.IsLetter(current))
             {
                 category = 'v'; // v indicates Variable
-                return false;
+                tokenFinished = false;
             }
 
             // If the token starts with a digit or a decimal, then it is a Number of an unknown amount of digits
@@ -180,39 +177,41 @@ namespace QuickCalculator
                     token = "0."; // If the first character of the number is a decimal, change it to "0." to avoid parsing errors
                     hasDecimal = true;
                 }
-                return false;
+                tokenFinished = false;
             }
 
             else if (operators.Contains(current))
             {
                 category = 'o';
-                return TokenizeOperator();
+                tokenFinished = TokenizeOperator();
             }
             else if (current == '(' || current == ')')
             {
                 category = current;
 
                 TokenizeParenthesis();
-                return true;
+                tokenFinished = true;
             }
             else if (current == '[' || current == ']')
             {
                 category = current;
 
                 TokenizeBracket();
-                return true;
+                tokenFinished = true;
             }
             else if (current == ',' && functionLevel > 0)   // ',' only makes a token if we are parsing the arguments of a function
             {
                 addToken = new LevelToken(",", ',', currentIndex, currentIndex + 1, functionLevel);
-                return true;
+                tokenFinished = true;
             }
             else
             {
                 // Any other character is invalid for the start of a token
                 evaluator.AddException("Invalid character '" + current + "' for start of token.", currentIndex, currentIndex + 1);
+                tokenFinished = true;
             }
-            return true;
+            ImplicitMultiplication();   // We need to check for implicit multiplication at the end of this function so the current token is categorized
+            return tokenFinished;
         }
 
         /// <summary>
@@ -254,7 +253,7 @@ namespace QuickCalculator
                 {
                     /*  If we encounter a parenthesis immediately following the number token, it is interpreted
                     *   as implicit multiplication */
-                    implicitMultiplication = true;
+                    preImplicitMultiplication = true;
                 }
             }
             return true;
@@ -392,6 +391,29 @@ namespace QuickCalculator
                         evaluator.AddException("Unmatched open parenthesis.", openParen.GetStart(), openParen.GetEnd());
                     }
 
+                }
+            }
+        }
+
+        private void ImplicitMultiplication()
+        { 
+            if(tokens.Count() >= 1)
+            {   // Implicit multiplication can only occur if there was at least one token prior to the current one
+                
+                switch (category)
+                {
+                    case 'n':
+                    case 'v':
+                    case 'f':
+                    case '(':
+                        char prevCategory = tokens[tokens.Count() - 1].GetCategory();
+                        if (prevCategory == 'n' || prevCategory == 'v' || prevCategory == ']' || prevCategory == ')')
+                        {
+                            /* Add a new * token of length 0. We do this directly to the list instead of using AddToken because the current token may have
+                             * populated addToken, which then would add that token instead of the multiplication. */
+                            tokens.Add(new Token("*", 'o', currentIndex, currentIndex));
+                        }
+                        break;
                 }
             }
         }

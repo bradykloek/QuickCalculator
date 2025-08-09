@@ -6,6 +6,10 @@ using System.Threading.Tasks;
 
 namespace QuickCalculator
 {
+    /// <summary>
+    /// Represents a token that holds additional information about what level it was found on. This is used for any elements
+    /// that need to be nestable, such as parentheses and functions.
+    /// </summary>
     internal class LevelToken : Token
     {
         private int level;

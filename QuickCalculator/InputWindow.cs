@@ -15,7 +15,10 @@ namespace QuickCalculator
         Color OPERATOR = Color.FromArgb(160, 255, 150);     // Light Green
         Color VARIABLE = Color.FromArgb(180, 180, 255);     // Light Purple
         Color ASSIGNMENT = Color.FromArgb(255, 255, 70);    // Yellow
-        Color FUNCTION = Color.FromArgb(255, 150, 255);     // Pink
+        Color FUNC1 = Color.FromArgb(255, 150, 255);        // Pink
+        Color FUNC2 = Color.FromArgb(150, 255, 200);        // Mint
+        Color FUNC3 = Color.FromArgb(255, 190, 190);        // Faded Red
+
 
         public InputWindow()
         {
@@ -105,6 +108,9 @@ namespace QuickCalculator
             colorText(0, inputTextBox.Text.Length, ASSIGNMENT, FontStyle.Regular);
             List<Token> tokens = evaluator.GetTokenizer().GetTokens();
             Color[] parenColors = { PAREN1, PAREN2, PAREN3};
+            Color[] funcColors = { FUNC1, FUNC2, FUNC3};
+
+            int level;
             for (int i = 0; i < tokens.Count(); i++)
             {
                 int tokenStart = tokens[i].GetStart();
@@ -113,7 +119,7 @@ namespace QuickCalculator
                 {
                     case '(':
                     case ')':
-                        int level = ((LevelToken)tokens[i]).GetLevel();
+                        level = ((LevelToken)tokens[i]).GetLevel();
                         colorText(tokenStart, 1, parenColors[level % 3], FontStyle.Regular);
                         break;
                     case 'n':
@@ -130,7 +136,8 @@ namespace QuickCalculator
                     case ']':
                     case ',':
                         // All of these tokens are only found in function calls
-                        colorText(tokenStart, tokenLength, FUNCTION, FontStyle.Regular);
+                        level = ((LevelToken)tokens[i]).GetLevel();
+                        colorText(tokenStart, tokenLength, funcColors[level % 3], FontStyle.Regular);
                         break;
                 }
             }

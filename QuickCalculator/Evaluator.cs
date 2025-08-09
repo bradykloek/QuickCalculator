@@ -74,7 +74,7 @@ namespace QuickCalculator
         }
 
         /// <summary>
-        /// AddError handles any invalid input. It either throws an exception or stores the exception in exceptions
+        /// AddException handles any invalid input. It either throws an exception or stores the exception in exceptions
         /// </summary>
         /// <param name="message"></param> Error Message
         /// <param name="charIndex"></param> Index of the input string that caused the error

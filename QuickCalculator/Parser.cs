@@ -167,10 +167,13 @@ namespace QuickCalculator
         private bool ParseFunction(FunctionToken functionToken)
         {
             currentIndex += 2;  // Move past '['
+            int level = functionToken.GetLevel();
             List<Token> argumentTokens = new List<Token>();
-            while (currentIndex < tokens.Count() && tokens[currentIndex].GetCategory() != ']')
+            while (currentIndex < tokens.Count())
             {
-                if (tokens[currentIndex].GetCategory() == ',')
+                if (tokens[currentIndex].GetCategory() == ']' && ((LevelToken)tokens[currentIndex]).GetLevel() == level) break;
+
+                if (tokens[currentIndex].GetCategory() == ',' && ((LevelToken)tokens[currentIndex]).GetLevel() == level)
                 {
                     Parser parseArg = new Parser(argumentTokens, evaluator);
                     // Parse this argument. Any errors will be added to the same evaluator

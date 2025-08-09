@@ -17,10 +17,9 @@ namespace QuickCalculator
 
         // Flags and variables that store temporary information for the Tokenizer
         bool hasAssignment = false;     // Assignment Operator encountered
-        int parenLevel = 0;             // Current level of parenthesization
-        int functionLevel = 0;          // Current level of function nesting
+        int parenLevel = -1;             // Current level of parenthesization
+        int functionLevel = -1;          // Current level of function nesting
         bool hasDecimal;                // Current number token contains a decimal
-        bool preImplicitMultiplication;    // Detected implicit multiplication
         Token addToken;                 /* Stores a token that was initialized somewhere other than the end of the Tokenize() loop
                                          * (this is used for creating tokens of a different subclass that hold extra information) */
         
@@ -110,7 +109,6 @@ namespace QuickCalculator
                 switch (category)
                 {
                     case '\0': // If a category hasn't yet been determined, we need to start with 
-                        preImplicitMultiplication = false;
                         hasDecimal = false;
                         if (StartToken()) break;
                         else continue;
@@ -134,7 +132,7 @@ namespace QuickCalculator
             }
 
             // Check if all parentheses have been matched
-            if(parenLevel != 0)
+            if(parenLevel != -1)
             {
                 checkParentheses();
             }
@@ -199,7 +197,7 @@ namespace QuickCalculator
                 TokenizeBracket();
                 tokenFinished = true;
             }
-            else if (current == ',' && functionLevel > 0)   // ',' only makes a token if we are parsing the arguments of a function
+            else if (current == ',' && functionLevel > -1)   // ',' only makes a token if we are parsing the arguments of a function
             {
                 addToken = new LevelToken(",", ',', currentIndex, currentIndex + 1, functionLevel);
                 tokenFinished = true;
@@ -226,7 +224,7 @@ namespace QuickCalculator
                 token += current;
                 return false;
             }
-            else if (current == ',' && functionLevel == 0)
+            else if (current == ',' && functionLevel == -1)
             {   // Commas can be in numbers and are simply ignored UNLESS the tokenizer is inside of a functions brackets, because then they separate arguments
                 return false; 
             }
@@ -248,13 +246,6 @@ namespace QuickCalculator
                 /*  If none of the above, then the current token ends and we will start a new one.
                 *  We must move the counter (i) back so the loop will check the current character again */
                 currentIndex--;
-
-                if (current == '(')
-                {
-                    /*  If we encounter a parenthesis immediately following the number token, it is interpreted
-                    *   as implicit multiplication */
-                    preImplicitMultiplication = true;
-                }
             }
             return true;
         }
@@ -275,7 +266,7 @@ namespace QuickCalculator
             if (current == '[')
             {
                 // If we encounter a [, this indicates this variable is actually a function
-                addToken = new FunctionToken(token, 'f', tokenStart, currentIndex, functionLevel++);
+                addToken = new FunctionToken(token, 'f', tokenStart, currentIndex, ++functionLevel);
             }
 
             /*  The current token ends and we will start a new one.
@@ -326,15 +317,15 @@ namespace QuickCalculator
         /// </summary>
         private void TokenizeParenthesis()
         {
-            if (current == '(') addToken = new LevelToken(token, category, tokenStart, currentIndex, parenLevel++);
+            if (current == '(') addToken = new LevelToken(token, category, tokenStart, currentIndex, ++parenLevel);
             else
             {
-                if (parenLevel == 0)
+                if (parenLevel < 0)
                 {
                     evaluator.AddException("Unmatched closing parenthesis.", currentIndex, currentIndex + 1);
-                    parenLevel++;   // This is to avoid the parenLevel being negative when the token is added, which would cause errores elsewhere
+                    parenLevel = 0;   // This is to avoid letting parenLevel be negative when the token is added, which would cause errores elsewhere
                 }
-                addToken = new LevelToken(token, category, tokenStart, currentIndex, --parenLevel);
+                addToken = new LevelToken(token, category, tokenStart, currentIndex, parenLevel--);
             }
         }
 
@@ -352,12 +343,14 @@ namespace QuickCalculator
             }
             else
             {
-                if (functionLevel == 0)
+                if (functionLevel == -1)
                 {
                     evaluator.AddException("Unmatched closing bracket.", currentIndex, currentIndex + 1);
-                    functionLevel++;
+                    functionLevel = 0;  /* To avoid a negative functionLevel, which could cause errors elsewhere
+                                         *  (namely when we attempt to color the token, which doesn't matter since it
+                                         *  will be red due to the exception anyway) */
                 }
-                addToken = new LevelToken(token, category, tokenStart, currentIndex + 1, --functionLevel);
+                addToken = new LevelToken(token, category, tokenStart, currentIndex + 1, functionLevel--);
             }
         }
 

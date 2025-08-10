@@ -457,11 +457,11 @@ namespace QuickCalculator
 
             if (prevToken.GetCategory() == 'v' && nextToken.GetCategory() == 'v') // If both are variables
             {
-                if (Symbols.variables.ContainsKey(nextToken.GetToken()))
+                if (SymbolTable.variables.ContainsKey(nextToken.GetToken()))
                 {   // So long as next is defined, we assign prev <= next (leftward asignment by default)
                     variableIdx = assignmentIdx - 1;
                 }
-                else if (Symbols.variables.ContainsKey(prevToken.GetToken()))
+                else if (SymbolTable.variables.ContainsKey(prevToken.GetToken()))
                 {   // If next isn't defined but prev is, then we do rightward assignment - prev => next
                     variableIdx = assignmentIdx + 1;
                 }
@@ -513,8 +513,8 @@ namespace QuickCalculator
 
 
             FunctionToken functionToken = (FunctionToken)tokens[0];
-            if (    Symbols.functions.ContainsKey(functionToken.GetToken()) 
-                &&  Symbols.functions[functionToken.GetToken()] is PrimitiveFunction)
+            if (    SymbolTable.functions.ContainsKey(functionToken.GetToken()) 
+                &&  SymbolTable.functions[functionToken.GetToken()] is PrimitiveFunction)
             {
                 ExceptionController.AddException("Cannot redefine primitive function '" + functionToken.GetToken() + "'.", functionToken.GetStart(), assignmentIdx + 1, 'T');
                 return false;

@@ -35,10 +35,10 @@ namespace QuickCalculator
             return parameters;
         }
 
-        public Symbols MarkParameters(Tokenizer tokenizer, bool definingFunction)
+        public SymbolTable MarkParameters(Tokenizer tokenizer, bool definingFunction)
         {
             List<Token> tokens = tokenizer.GetTokens();
-            Symbols dummyParameters = new Symbols();
+            SymbolTable dummyParameters = new SymbolTable();
             for (int i = 0; i < parameters.Count(); i++)
             {
                 for(int j = 0; j < tokens.Count(); j++)
@@ -78,7 +78,7 @@ namespace QuickCalculator
                 return 1;
             }
 
-            Symbols localVariables = new Symbols();
+            SymbolTable localVariables = new SymbolTable();
             // First we must assign all of the arguments to the correct parameters as local variables
             for (int i = 0; i < parameters.Count(); i++)
             {   

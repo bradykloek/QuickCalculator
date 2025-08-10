@@ -34,7 +34,7 @@ namespace QuickCalculator
                 {
                     // If customFunction isn't null then this input was defining a custom function
 
-                    Symbols dummyParameters = customFunction.MarkParameters(tokenizer, customFunction != null);
+                    SymbolTable dummyParameters = customFunction.MarkParameters(tokenizer, customFunction != null);
                     parser = new Parser(tokenizer.GetTokens(), false, dummyParameters);
                     result = 0;     /* It doesn't matter what the parser reads here since this is just for defining a function
                                      * and the resulting value is irrelevant. (result will be 0 anyway) */
@@ -42,7 +42,7 @@ namespace QuickCalculator
                     if (executeFunctions)
                     {   // Only if the user hit enter should we actually save this custom function
                         customFunction.SetTokens(tokenizer.GetTokens());
-                        Symbols.functions[customFunction.GetName()] = customFunction;
+                        SymbolTable.functions[customFunction.GetName()] = customFunction;
                     }
                 }
             }

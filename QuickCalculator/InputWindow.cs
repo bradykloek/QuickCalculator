@@ -47,7 +47,7 @@ namespace QuickCalculator
                     Debug.WriteLine(evaluator.GetTokenizer().ToString());
                     if (evaluator.GetAssignVariable() != "")
                     {   // If parser encountered no errors and a variable is to be assigned
-                        Symbols.variables[evaluator.GetAssignVariable()] = evaluator.GetResult();
+                        SymbolTable.variables[evaluator.GetAssignVariable()] = evaluator.GetResult();
                     }
                 }
                 else

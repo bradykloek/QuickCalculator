@@ -7,7 +7,13 @@ using System.Threading.Tasks;
 
 namespace QuickCalculator
 {
-    internal class Symbols
+    /// <summary>
+    /// Stores all of the defined variables and functions in Hashtables.
+    /// The global symbols are held in static Hashtables.
+    /// Creating an instance of SymbolTable provides an instance variable localVariables that represents
+    /// a single local scope of variables.
+    /// </summary>
+    internal class SymbolTable
     {
         public static Hashtable variables = new Hashtable
         {
@@ -100,7 +106,7 @@ namespace QuickCalculator
 
         private Hashtable localVariables;
 
-        public Symbols()
+        public SymbolTable()
         {
             localVariables = new Hashtable();
         }

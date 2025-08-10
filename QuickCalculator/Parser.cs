@@ -20,7 +20,7 @@ namespace QuickCalculator
         private List<Token> tokens;
         private int currentIndex;
         private double result;
-        private Symbols localVariables;
+        private SymbolTable localVariables;
         private bool executeFunctions;
 
 
@@ -31,7 +31,7 @@ namespace QuickCalculator
         /// <param name="tokens"></param>
         /// 
 
-        public Parser(List<Token> tokens, bool executeFunctions, Symbols localVariables)
+        public Parser(List<Token> tokens, bool executeFunctions, SymbolTable localVariables)
         {
             this.localVariables = localVariables;
             this.tokens = tokens;
@@ -41,7 +41,7 @@ namespace QuickCalculator
         }
 
         public Parser(List<Token> tokens, bool executeFunctions) 
-            : this(tokens, executeFunctions, new Symbols()) {   }
+            : this(tokens, executeFunctions, new SymbolTable()) {   }
 
 
 
@@ -116,7 +116,7 @@ namespace QuickCalculator
                         break;
                     case "!":
                         // Pass left in as the sole argument for the "factorial" function
-                        left = ((PrimitiveFunction)Symbols.functions["factorial"]).Execute(new List<double> { left });
+                        left = ((PrimitiveFunction)SymbolTable.functions["factorial"]).Execute(new List<double> { left });
                         break;
                 }
             }
@@ -149,9 +149,9 @@ namespace QuickCalculator
                     {   // First check if this variable is defined locally, since local variables should overshadow globals
                         value = (double)localVariables.GetLocal(token.GetToken());
                     }
-                    else if (Symbols.variables.Contains(token.GetToken()))
+                    else if (SymbolTable.variables.Contains(token.GetToken()))
                     {
-                        value = (double)Symbols.variables[token.GetToken()];
+                        value = (double)SymbolTable.variables[token.GetToken()];
                     }
                     else
                     {
@@ -184,14 +184,14 @@ namespace QuickCalculator
                 return 1;
             }
 
-            if (!Symbols.functions.Contains(functionToken.GetToken()))
+            if (!SymbolTable.functions.Contains(functionToken.GetToken()))
             {   // functionToken is not in the functions hash table
                 ExceptionController.AddException("Undefined function '" + functionToken.GetToken() + "'.", functionToken.GetStart(), functionToken.GetEnd(), 'P');
                 return 1;
             }
             else
             {   
-                Function function = (Function) Symbols.functions[functionToken.GetToken()];
+                Function function = (Function) SymbolTable.functions[functionToken.GetToken()];
 
                 int expectedArgCount = function.GetNumArgs();
                 int actualArgCount = arguments.Count();
@@ -218,10 +218,11 @@ namespace QuickCalculator
 
         /// <summary>
         /// Parses tokens starting at a function token until it reaches the ']' that terminates the function call.
-        /// Each time an individual argument is terminated by a ',' token, it is parsed and added as a double to the
-        /// function token's arguments list.
+        /// Each time an individual argument is terminated by a ',' token, it is parsed and added to the list of
+        /// doubles that is eventually returned.
         /// </summary>
-        /// <param name="functionToken"></param> The token of the function that has been called
+        /// <param name="functionToken"></param> The token of the function that is being parsed
+        /// <returns></returns> A list of doubles representing the parsed arguments
         private List<double> ParseArguments(FunctionToken functionToken)
         {
             currentIndex += 2;  // Move past '['
@@ -285,11 +286,5 @@ namespace QuickCalculator
             }
             return sb.ToString();
         }
-
-        //public string ToString()
-        //{
-        //    return result.ToString();
-        //}
-
     }
 }

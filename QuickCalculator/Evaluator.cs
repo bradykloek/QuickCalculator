@@ -9,24 +9,53 @@ namespace QuickCalculator
 {
     internal class Evaluator
     {
-        private List<EvaluationException> exceptions;       // If we don't throw exceptions, they will be stored here
         private bool executeFunctions;
         private double result;
         private Tokenizer tokenizer;
         private Parser parser;
         private string assignVariable = "";
+        private CustomFunction customFunction = null;
 
-        public Evaluator(string input, bool executeFunctions)
+        public Evaluator(string input, bool executeFunctions, double roundPrecision)
         {
-            exceptions = new List<EvaluationException>(input.Length / 2);
             this.executeFunctions = executeFunctions;
+            ExceptionController.ClearExceptions();
+
             tokenizer = new Tokenizer(input, this);
-            if (exceptions.Count() == 0)
+
+            if (ExceptionController.Count() == 0)
             {
-                parser = new Parser(tokenizer.GetTokens(), this);
-                result = parser.GetResult();
+                if (customFunction == null)
+                {
+                    parser = new Parser(tokenizer.GetTokens(), executeFunctions);
+                    result = parser.GetResult();
+                }
+                else
+                {
+                    // If customFunction isn't null then this input was defining a custom function
+
+                    Symbols dummyParameters = customFunction.MarkParameters(tokenizer, customFunction != null);
+                    parser = new Parser(tokenizer.GetTokens(), false, dummyParameters);
+                    result = 0;     /* It doesn't matter what the parser reads here since this is just for defining a function
+                                     * and the resulting value is irrelevant. (result will be 0 anyway) */
+
+                    if (executeFunctions)
+                    {   // Only if the user hit enter should we actually save this custom function
+                        customFunction.SetTokens(tokenizer.GetTokens());
+                        Symbols.functions[customFunction.GetName()] = customFunction;
+                    }
+                }
             }
+
+
+
+            if (roundPrecision > 0 && Math.Abs(result - Math.Round(result)) <= roundPrecision)
+            {
+                result = Math.Round(result);
+            }
+
         }
+
 
         public double GetResult()
         {
@@ -38,11 +67,6 @@ namespace QuickCalculator
             return executeFunctions;
         }
 
-        public int GetExceptionCount()
-        {
-            return exceptions.Count();
-        }
-
         public Tokenizer GetTokenizer()
         {
             return tokenizer;
@@ -51,11 +75,6 @@ namespace QuickCalculator
         public Parser GetParser()
         {
             return parser;
-        }
-
-        public List<EvaluationException> GetExceptions()
-        {
-            return exceptions;
         }
 
         public string ToString()
@@ -73,28 +92,19 @@ namespace QuickCalculator
             return assignVariable;
         }
 
-        /// <summary>
-        /// AddException handles any invalid input. It either throws an exception or stores the exception in exceptions
-        /// </summary>
-        /// <param name="message"></param> Error Message
-        /// <param name="charIndex"></param> Index of the input string that caused the error
-        /// <exception cref="EvaluationException"></exception>
-        public void AddException(string message, int start, int end, char source)
+        public void SetCustomFunction(CustomFunction customFunction)
         {
-            exceptions.Add(new EvaluationException(message, start, end, source));
+            this.customFunction = customFunction;
         }
 
-
-        public string ErrorMessage()
+        public bool DefiningFunction()
         {
-            StringBuilder sb = new StringBuilder();
-            sb.Append("Evaluator encountered " + exceptions.Count() + " errors:\n");
-            for (int i = 0; i < exceptions.Count(); i++)
-            {
-                sb.Append(" " + (i + 1) + ":   " + exceptions[i].ToString() + "\n");
-            }
-            return sb.ToString();
+            return customFunction != null;
         }
 
+        public CustomFunction GetUserFunction()
+        {
+            return customFunction;
+        }
     }
 }

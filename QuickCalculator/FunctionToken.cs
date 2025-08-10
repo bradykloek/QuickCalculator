@@ -15,10 +15,12 @@ namespace QuickCalculator
     {
         private int level;
         private List<double> arguments;
+        private int numArgs;
         public FunctionToken(string token, char category, int start, int end, int level) : base(token, category, start, end, level)
         {
             this.level = level;
             arguments = new List<double>();
+            numArgs = 0;
         }
 
         public List<double> GetArgs()
@@ -26,9 +28,15 @@ namespace QuickCalculator
             return arguments;
         }
 
+        public int GetNumArgs()
+        {
+            return numArgs;
+        }
+
         public void AddArg(double arg)
         {
             arguments.Add(arg);
+            numArgs = arguments.Count();
         }
     }
 }

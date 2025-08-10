@@ -1,32 +1,16 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace QuickCalculator
 {
-    internal class Function
+    internal abstract class Function
     {
-        private int numArgs;
-        private Func<List<double>, double> function;
+        public abstract int GetNumArgs();
 
-        public Function(int args, Func<List<double>, double> func)
-        {
-            numArgs = args;
-            function = func;
-        }
-
-        public int GetNumArgs()
-        {
-            return numArgs;
-        }
-
-        public double Execute(List<double> args)
-        {
-            Debug.WriteLine(args.Count());
-            return function(args);
-        }
+        public abstract double Execute(List<double> args); 
     }
 }

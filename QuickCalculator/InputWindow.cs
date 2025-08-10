@@ -18,6 +18,9 @@ namespace QuickCalculator
         Color FUNC1 = Color.FromArgb(255, 150, 255);        // Pink
         Color FUNC2 = Color.FromArgb(150, 255, 200);        // Mint
         Color FUNC3 = Color.FromArgb(255, 190, 190);        // Faded Red
+        Color PARAMETER = Color.FromArgb(255, 255, 160);    // Faded Yellow
+
+        double roundPrecision = 0.00000001;
 
 
         public InputWindow()
@@ -35,9 +38,9 @@ namespace QuickCalculator
             {
                 e.SuppressKeyPress = true;
 
-                Evaluator evaluator = new Evaluator(inputTextBox.Text, true);
+                Evaluator evaluator = new Evaluator(inputTextBox.Text, true, roundPrecision);
 
-                if (evaluator.GetExceptionCount() == 0)
+                if (ExceptionController.Count() == 0)
                 {
 
                     System.Windows.Forms.MessageBox.Show(evaluator.ToString());
@@ -49,7 +52,7 @@ namespace QuickCalculator
                 }
                 else
                 {
-                    System.Windows.Forms.MessageBox.Show(evaluator.ErrorMessage());
+                    System.Windows.Forms.MessageBox.Show(ExceptionController.ErrorMessage());
                 }
 
             }
@@ -57,7 +60,7 @@ namespace QuickCalculator
 
         private void inputTextBox_TextChanged(object sender, EventArgs e)
         {
-            Evaluator evaluator = new Evaluator(inputTextBox.Text, false);
+            Evaluator evaluator = new Evaluator(inputTextBox.Text, false,0);
 
             colorTokens(evaluator);
             colorErrors(evaluator);
@@ -89,11 +92,11 @@ namespace QuickCalculator
         /// <param name="tokenizer"></param> Collection of tokens that is parsed
         private void colorErrors(Evaluator evaluator)
         {
-            List<EvaluationException> tokenizerExceptions = evaluator.GetExceptions();
-            for (int i = 0; i < tokenizerExceptions.Count(); i++)
+            List<EvaluationException> exceptions = ExceptionController.GetExceptions();
+            for (int i = 0; i < exceptions.Count(); i++)
             {
-                int start = tokenizerExceptions[i].GetStart();
-                int end = tokenizerExceptions[i].GetEnd();
+                int start = exceptions[i].GetStart();
+                int end = exceptions[i].GetEnd();
                 colorText(start, end, Color.Red, FontStyle.Underline);
             }
         }
@@ -138,6 +141,9 @@ namespace QuickCalculator
                         // All of these tokens are only found in function calls
                         level = ((LevelToken)tokens[i]).GetLevel();
                         colorText(tokenStart, tokenLength, funcColors[level % 3], FontStyle.Regular);
+                        break;
+                    case 'a':
+                        colorText(tokenStart, tokenLength, PARAMETER, FontStyle.Regular);
                         break;
                 }
             }

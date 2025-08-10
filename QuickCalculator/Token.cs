@@ -46,6 +46,11 @@ namespace QuickCalculator
             return category;
         }
 
+        public void SetCategory(char category)
+        {
+            this.category = category;
+        }
+
         public int GetStart()
         {
             return inputStart;

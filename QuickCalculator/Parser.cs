@@ -20,20 +20,30 @@ namespace QuickCalculator
         private List<Token> tokens;
         private int currentIndex;
         private double result;
-        private Evaluator evaluator;
+        private Symbols localVariables;
+        private bool executeFunctions;
+
 
         /// <summary>
         /// Initializes a Parser using a completed token list. This will parse and evaluate the tokens,
         /// and store the result in this.result.
         /// </summary>
         /// <param name="tokens"></param>
-        public Parser(List<Token> tokens, Evaluator evaluator)
+        /// 
+
+        public Parser(List<Token> tokens, bool executeFunctions, Symbols localVariables)
         {
-            this.evaluator = evaluator;
+            this.localVariables = localVariables;
             this.tokens = tokens;
             currentIndex = 0;
+            this.executeFunctions = executeFunctions;
             result = ParseExpression();
         }
+
+        public Parser(List<Token> tokens, bool executeFunctions) 
+            : this(tokens, executeFunctions, new Symbols()) {   }
+
+
 
         /// <summary>
         /// Checks that the current token (tokens[i]) is the same as matchWith. Avoids out of bounds errors.
@@ -48,7 +58,7 @@ namespace QuickCalculator
 
         private double ParseExpression()
         {
-            if (tokens.Count() == 0) return 0;
+            if (tokens.Count() == 0) return 1;
             double left = ParseTerm();
             while (MatchToken("+") || MatchToken("-"))
             {
@@ -94,11 +104,21 @@ namespace QuickCalculator
         private double ParseFactor()
         {
             double left = ParsePrimary();
-            while (MatchToken("^"))
+            while (MatchToken("^") || MatchToken("!"))
             {
+                string op = tokens[currentIndex].GetToken();
                 currentIndex++; // Move past operator
-                double right = ParseFactor();
-                left = Math.Pow(left, right);
+                switch (op)
+                {
+                    case "^":
+                        double right = ParseFactor();
+                        left = Math.Pow(left, right);
+                        break;
+                    case "!":
+                        // Pass left in as the sole argument for the "factorial" function
+                        left = ((PrimitiveFunction)Symbols.functions["factorial"]).Execute(new List<double> { left });
+                        break;
+                }
             }
             return left;
         }
@@ -109,8 +129,8 @@ namespace QuickCalculator
             {
                 // If we have gone out of bounds of the Token List, there was an operator at the end of the string which thus didn't have enough operands
                 Token prevToken = tokens[currentIndex - 1];
-                evaluator.AddException("Input ends with operator '" + prevToken.GetToken() + "', which does not have enough operands.", prevToken.GetStart(), prevToken.GetEnd(), 'P');
-                return 0;
+                ExceptionController.AddException("Input ends with operator '" + prevToken.GetToken() + "', which does not have enough operands.", prevToken.GetStart(), prevToken.GetEnd(), 'P');
+                return 1;
             }
             Token token = tokens[currentIndex];
             double value = 0;
@@ -124,84 +144,123 @@ namespace QuickCalculator
                     value = ParseExpression();
                     break;
                 case 'v':
-                    if (Symbols.variables.Contains(token.GetToken()))
+                case 'a':
+                    if (localVariables.LocalsContains(token.GetToken()))
+                    {   // First check if this variable is defined locally, since local variables should overshadow globals
+                        value = (double)localVariables.GetLocal(token.GetToken());
+                    }
+                    else if (Symbols.variables.Contains(token.GetToken()))
                     {
                         value = (double)Symbols.variables[token.GetToken()];
                     }
                     else
                     {
-                        evaluator.AddException("Undefined variable '" + token.GetToken() + "'.", token.GetStart(), token.GetEnd(), 'P');
+                        ExceptionController.AddException("Undefined variable '" + token.GetToken() + "'.", token.GetStart(), token.GetEnd(), 'P');
                     }
                     break;
                 case 'f':
-                    FunctionToken functionToken = (FunctionToken)tokens[currentIndex];
-                    if (!ParseFunction(functionToken)) return 0;
-                    if (!Symbols.functions.Contains(token.GetToken()))
-                        evaluator.AddException("Undefined function '" + token.GetToken() + "'.", token.GetStart(), token.GetEnd(), 'P');
-                    else
-                    {
-                        Function function = (Function)Symbols.functions[token.GetToken()];
-                        List<double> args = functionToken.GetArgs();
-                        int actualArgCount = args.Count();
-                        int expectedArgCount = function.GetNumArgs();
-                        if (actualArgCount != expectedArgCount)
-                            evaluator.AddException( "Function '" + token.GetToken() + "' requires " + 
-                                                    expectedArgCount + " arguments, received " + actualArgCount + ".",
-                                                    functionToken.GetStart(), functionToken.GetEnd(), 'P');
-                        else
-                        {
-                            value = evaluator.GetExecuteFunctions() ? function.Execute(args) : 1;
-                        }
-
-                    }
+                    value = ParseFunction();
                     break;
                 default:
                     // If the switch falls to the default, there was a token we didn't account for.
-                    evaluator.AddException("Encountered an unexpected token '" + token.GetToken() + "'.", token.GetStart(), token.GetEnd(), 'P');
+                    ExceptionController.AddException("Encountered an unexpected token '" + token.GetToken() + "'.", token.GetStart(), token.GetEnd(), 'P');
                     break;
             }
             currentIndex++;
             return value;
         }
 
-        private bool ParseFunction(FunctionToken functionToken)
+        /// <summary>
+        /// Parses a function token and arguments. Executes the function if needed.
+        /// </summary>
+        /// <returns></returns> If the function should be executed, returns the result of the function call. If not, returns 1 as a dummy value.
+        private double ParseFunction()
+        {
+            FunctionToken functionToken = (FunctionToken)tokens[currentIndex];
+            List<double> arguments = ParseArguments(functionToken);  // Populate arguments list
+
+            if(arguments == null)
+            {   // This has already added an exception inside of ParseArguments()
+                return 1;
+            }
+
+            if (!Symbols.functions.Contains(functionToken.GetToken()))
+            {   // functionToken is not in the functions hash table
+                ExceptionController.AddException("Undefined function '" + functionToken.GetToken() + "'.", functionToken.GetStart(), functionToken.GetEnd(), 'P');
+                return 1;
+            }
+            else
+            {   
+                Function function = (Function) Symbols.functions[functionToken.GetToken()];
+
+                int expectedArgCount = function.GetNumArgs();
+                int actualArgCount = arguments.Count();
+
+                if (actualArgCount != expectedArgCount)
+                {
+                    ExceptionController.AddException("Function '" + functionToken.GetToken() + "' requires " +
+                                            expectedArgCount + " arguments, received " + actualArgCount + ".",
+                                            functionToken.GetStart(), functionToken.GetEnd(), 'P');
+                }
+
+
+                if (executeFunctions && ExceptionController.Count() == 0)
+                {   // Only execute the function if this Evaluator is set to execute functions and there have been no exceptions
+                    return function.Execute(arguments);
+                }
+                else
+                {   // Otherwise just return a dummy value of 1. The user won't see the result in this case anyway.
+                    return 1;
+                }
+
+            }
+        }
+
+        /// <summary>
+        /// Parses tokens starting at a function token until it reaches the ']' that terminates the function call.
+        /// Each time an individual argument is terminated by a ',' token, it is parsed and added as a double to the
+        /// function token's arguments list.
+        /// </summary>
+        /// <param name="functionToken"></param> The token of the function that has been called
+        private List<double> ParseArguments(FunctionToken functionToken)
         {
             currentIndex += 2;  // Move past '['
             int level = functionToken.GetLevel();
+            List<double> arguments = new List<double>();
             List<Token> argumentTokens = new List<Token>();
             while (currentIndex < tokens.Count())
-            {
+            {   // End loop if we find a closing bracket of the same level as the function we are parsing
                 if (tokens[currentIndex].GetCategory() == ']' && ((LevelToken)tokens[currentIndex]).GetLevel() == level) break;
 
                 if (tokens[currentIndex].GetCategory() == ',' && ((LevelToken)tokens[currentIndex]).GetLevel() == level)
-                {
-                    Parser parseArg = new Parser(argumentTokens, evaluator);
+                {   // If we find a ',' of the same level as the current function, parse the tokens of the argument and add the resulting double to the functionToken's arguments list
+
+                    Parser parseArg = new Parser(argumentTokens, executeFunctions, localVariables);
                     // Parse this argument. Any errors will be added to the same evaluator
 
-                    functionToken.AddArg(parseArg.GetResult());
+                    arguments.Add(parseArg.GetResult());
                     argumentTokens = new List<Token>();
                 }
                 else
-                {
+                {   // Any token other than ',' comprises the argument, so add it to the argumentsTokens list
                     argumentTokens.Add(tokens[currentIndex]);
                 }
                 currentIndex++;
             }
 
             if (currentIndex >= tokens.Count())
-            {
-                evaluator.AddException("Unmatched open bracket.", currentIndex - 1, currentIndex - 1, 'P');
-                return false;
+            {   // If the loop didn't find a ']', there is an unmatched open bracket
+                ExceptionController.AddException("Unmatched open bracket.", currentIndex - 1, currentIndex - 1, 'P');
+                return null;
             }
 
             if (argumentTokens.Count() > 0)
-            {   // Add the last argument
-                Parser parseArg = new Parser(argumentTokens, evaluator);
-                functionToken.AddArg(parseArg.GetResult());
-                currentIndex++;
+            {   // Add the last argument if it has at least one token
+                Parser parseArg = new Parser(argumentTokens, executeFunctions, localVariables);
+                arguments.Add(parseArg.GetResult());
             }
 
-            return true;
+            return arguments;
         }
 
 
@@ -210,7 +269,7 @@ namespace QuickCalculator
             return result;
         }
 
-        public string DebugToString()
+        public string ToString()
         {
             StringBuilder sb = new StringBuilder();
             for (int x = 0; x < tokens.Count(); x++)
@@ -227,10 +286,10 @@ namespace QuickCalculator
             return sb.ToString();
         }
 
-        public string ToString()
-        {
-            return result.ToString();
-        }
+        //public string ToString()
+        //{
+        //    return result.ToString();
+        //}
 
     }
 }

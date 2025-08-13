@@ -9,51 +9,70 @@ namespace QuickCalculator
 {
     internal class Evaluator
     {
-        private bool executeFunctions;
+        private bool executeInput;
         private double result;
         private Tokenizer tokenizer;
         private Parser parser;
-        private string assignVariable = "";
-        private CustomFunction customFunction = null;
+        private double roundPrecision;
+        private string outputString;
 
-        public Evaluator(string input, bool executeFunctions, double roundPrecision)
+        public Evaluator(string input, bool executeInput, double roundPrecision)
         {
-            this.executeFunctions = executeFunctions;
+            this.executeInput = executeInput;
+            this.roundPrecision = roundPrecision;
             ExceptionController.ClearExceptions();
 
-            tokenizer = new Tokenizer(input, this);
+            tokenizer = new Tokenizer(input);
 
+            if (tokenizer.GetAssignVariable() != "")
+                PerformAssignment(tokenizer.GetAssignVariable());
+            else if (tokenizer.GetDefineFunction() != null)
+                DefineCustomFunction(tokenizer.GetDefineFunction());
+            else if (ExceptionController.Count() == 0)
+            {
+                parser = new Parser(tokenizer.GetTokens(), executeInput);
+                SetResult(parser.GetResult());
+            }
+
+        }
+
+        private void PerformAssignment(string variableName)
+        {
+            Parser assignmentParser = new Parser(tokenizer.GetTokens(), executeInput);
+            SetResult(assignmentParser.GetResult());
             if (ExceptionController.Count() == 0)
             {
-                if (customFunction == null)
-                {
-                    parser = new Parser(tokenizer.GetTokens(), executeFunctions);
-                    result = parser.GetResult();
-                }
-                else
-                {
-                    // If customFunction isn't null then this input was defining a custom function
-
-                    SymbolTable dummyParameters = customFunction.MarkParameters(tokenizer, customFunction != null);
-                    parser = new Parser(tokenizer.GetTokens(), false, dummyParameters);
-                    result = 0;     /* It doesn't matter what the parser reads here since this is just for defining a function
-                                     * and the resulting value is irrelevant. (result will be 0 anyway) */
-
-                    if (executeFunctions)
-                    {   // Only if the user hit enter should we actually save this custom function
-                        customFunction.SetTokens(tokenizer.GetTokens());
-                        SymbolTable.functions[customFunction.GetName()] = customFunction;
-                    }
-                }
+                SymbolTable.variables[variableName] = result;
             }
 
+            outputString = variableName + " = " + result;
+        }
 
 
+        private void DefineCustomFunction(CustomFunction customFunction)
+        {
+            List<Token> tokens = tokenizer.GetTokens();
+            SymbolTable dummyParameters = customFunction.MarkParameters(tokens, customFunction != null);
+            Parser definitionParser = new Parser(tokens, false, dummyParameters);
+            // definitionParser is only used to check the syntax of the function definition-- its result doesn't mean anything
+
+            if (executeInput)
+            {   // Only if the user hit enter should we actually save this custom function
+                customFunction.SetTokens(tokens);
+                SymbolTable.functions[customFunction.GetName()] = customFunction;
+            }
+
+            outputString = customFunction.ToString();
+        }
+
+        private void SetResult(double value)
+        {
+            result = value;
             if (roundPrecision > 0 && Math.Abs(result - Math.Round(result)) <= roundPrecision)
             {
-                result = Math.Round(result);
+                result = Math.Round(value);
             }
-
+            outputString = result.ToString();
         }
 
 
@@ -61,50 +80,14 @@ namespace QuickCalculator
         {
             return result;
         }
-
-        public bool GetExecuteFunctions()
-        {
-            return executeFunctions;
-        }
-
-        public Tokenizer GetTokenizer()
-        {
-            return tokenizer;
-        }
-
-        public Parser GetParser()
-        {
-            return parser;
-        }
-
         public string ToString()
         {
-            return result.ToString();
+            return outputString;
         }
 
-        public void SetAssignVariable(string variableName)
+        public List<Token> GetTokens()
         {
-            assignVariable = variableName;
-        }
-
-        public string GetAssignVariable()
-        {
-            return assignVariable;
-        }
-
-        public void SetCustomFunction(CustomFunction customFunction)
-        {
-            this.customFunction = customFunction;
-        }
-
-        public bool DefiningFunction()
-        {
-            return customFunction != null;
-        }
-
-        public CustomFunction GetUserFunction()
-        {
-            return customFunction;
+            return tokenizer.GetTokens();
         }
     }
 }

@@ -18,7 +18,7 @@ namespace QuickCalculator
         Color FUNC1 = Color.FromArgb(255, 150, 255);        // Pink
         Color FUNC2 = Color.FromArgb(150, 255, 200);        // Mint
         Color FUNC3 = Color.FromArgb(255, 190, 190);        // Faded Red
-        Color PARAMETER = Color.FromArgb(255, 255, 160);    // Faded Yellow
+        Color ARGUMENT = Color.FromArgb(255, 255, 160);     // Faded Yellow
 
         double roundPrecision = 0.00000001;
 
@@ -42,13 +42,7 @@ namespace QuickCalculator
 
                 if (ExceptionController.Count() == 0)
                 {
-
                     System.Windows.Forms.MessageBox.Show(evaluator.ToString());
-                    Debug.WriteLine(evaluator.GetTokenizer().ToString());
-                    if (evaluator.GetAssignVariable() != "")
-                    {   // If parser encountered no errors and a variable is to be assigned
-                        SymbolTable.variables[evaluator.GetAssignVariable()] = evaluator.GetResult();
-                    }
                 }
                 else
                 {
@@ -109,7 +103,7 @@ namespace QuickCalculator
         {
             // The only text that isn't a part of a token is for assignments, since the assignment operater and assignee variable are removed
             colorText(0, inputTextBox.Text.Length, ASSIGNMENT, FontStyle.Regular);
-            List<Token> tokens = evaluator.GetTokenizer().GetTokens();
+            List<Token> tokens = evaluator.GetTokens();
             Color[] parenColors = { PAREN1, PAREN2, PAREN3};
             Color[] funcColors = { FUNC1, FUNC2, FUNC3};
 
@@ -143,7 +137,7 @@ namespace QuickCalculator
                         colorText(tokenStart, tokenLength, funcColors[level % 3], FontStyle.Regular);
                         break;
                     case 'a':
-                        colorText(tokenStart, tokenLength, PARAMETER, FontStyle.Regular);
+                        colorText(tokenStart, tokenLength, ARGUMENT, FontStyle.Regular);
                         break;
                 }
             }

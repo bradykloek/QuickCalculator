@@ -11,8 +11,9 @@ namespace QuickCalculator
     internal class Tokenizer
     {
         private string input;                       // The raw string input
-        private Evaluator evaluator;                // Evaluator object that created this Tokenizer. Things like error data will be stored here
         private List<Token> tokens;                 // Stores the tokens that get created
+        string assignVariable = "";
+        CustomFunction defineFunction = null;
 
         private static char[] operators = { '+', '-', '*', '/', '^', '%', '!', '=' };
 
@@ -31,10 +32,9 @@ namespace QuickCalculator
         string token = "";              // String content of the current token
         int tokenStart = 0;             // Index that the current token started at
 
-        public Tokenizer(string input, Evaluator evaluator)
+        public Tokenizer(string input)
         {
             this.input = input;
-            this.evaluator = evaluator;
             tokens = new List<Token>(input.Length / 2);
             // Starts tokens with a capacity of 50% of input.Length to avoid the initial resizings which would almost always occur
 
@@ -45,6 +45,16 @@ namespace QuickCalculator
         public List<Token> GetTokens()
         {
             return tokens;
+        }
+
+        public string GetAssignVariable()
+        {
+            return assignVariable;
+        }
+
+        public CustomFunction GetDefineFunction()
+        {
+            return defineFunction;
         }
 
 
@@ -144,7 +154,7 @@ namespace QuickCalculator
              */
             if (hasAssignment && ExceptionController.Count() == 0)
             {
-                prepareAssignment();
+                PrepareAssignment();
             }
         }
 
@@ -425,7 +435,7 @@ namespace QuickCalculator
         /// Determines which token is the variable that will store the resulting value. This token is sent to be stored in
         /// evaluator then is removed from the token list.
         /// </summary>
-        private void prepareAssignment()
+        private void PrepareAssignment()
         {
             int assignmentIdx = 0;
             int variableIdx;
@@ -493,13 +503,16 @@ namespace QuickCalculator
                 }
             }
 
-            // Send the variable to the evaluator
-            evaluator.SetAssignVariable(tokens[variableIdx].GetToken());
+            string variableName = tokens[variableIdx].GetToken();
 
             // Removing from the List will shift indices. We need to remove the lowest index twice to remove the variable and the assignment operator
             tokens.RemoveAt(Math.Min(assignmentIdx, variableIdx));
             tokens.RemoveAt(Math.Min(assignmentIdx, variableIdx));
+
+            assignVariable = variableName;
         }
+
+
 
         private bool TokenizeCustomFunction(int assignmentIdx)
         {
@@ -550,7 +563,7 @@ namespace QuickCalculator
             tokens.RemoveAt(0);     // Remove ']'
             tokens.RemoveAt(0);     // Remove '='
 
-            evaluator.SetCustomFunction(new CustomFunction(functionToken.GetToken(),parameters));
+            defineFunction = new CustomFunction(functionToken.GetToken(), parameters);
             return true;
         }
     }

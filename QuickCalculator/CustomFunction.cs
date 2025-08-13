@@ -35,9 +35,8 @@ namespace QuickCalculator
             return parameters;
         }
 
-        public SymbolTable MarkParameters(Tokenizer tokenizer, bool definingFunction)
+        public SymbolTable MarkParameters(List<Token> tokens, bool definingFunction)
         {
-            List<Token> tokens = tokenizer.GetTokens();
             SymbolTable dummyParameters = new SymbolTable();
             for (int i = 0; i < parameters.Count(); i++)
             {
@@ -87,6 +86,21 @@ namespace QuickCalculator
 
             Parser functionParser = new Parser(tokens, true, localVariables);
             return functionParser.GetResult();
+        }
+
+        public override string ToString()
+        {
+            StringBuilder sb = new StringBuilder(name);
+            sb.Append('[');
+
+            for (int i = 0; i < parameters.Count(); i++)
+            {
+                sb.Append(parameters[i]);
+                if(i < parameters.Count() - 1) sb.Append(',');
+            }
+            sb.Append(']');
+
+            return sb.ToString();
         }
     }
 }

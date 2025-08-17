@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace QuickCalculator
 {
@@ -22,7 +23,6 @@ namespace QuickCalculator
         private double result;
         private SymbolTable localVariables;
         private bool executeFunctions;
-        private bool inquireSymbols;
 
         /// <summary>
         /// Initializes a Parser using a completed token list. This will parse and evaluate the tokens,
@@ -31,18 +31,17 @@ namespace QuickCalculator
         /// <param name="tokens"></param>
         /// 
 
-        public Parser(List<Token> tokens, bool executeFunctions, SymbolTable localVariables, bool inquireSymbols = false)
+        public Parser(List<Token> tokens, bool executeFunctions, SymbolTable localVariables)
         {
             this.localVariables = localVariables;
             this.tokens = tokens;
-            this.inquireSymbols = inquireSymbols;
             currentIndex = 0;
             this.executeFunctions = executeFunctions;
             result = ParseExpression();
         }
 
-        public Parser(List<Token> tokens, bool executeFunctions, bool inquireSymbols = false) 
-            : this(tokens, executeFunctions, new SymbolTable(), inquireSymbols) {   }
+        public Parser(List<Token> tokens, bool executeFunctions) 
+            : this(tokens, executeFunctions, new SymbolTable()) {   }
 
         /// <summary>
         /// Checks that the current token (tokens[i]) is the same as matchWith. Avoids out of bounds errors.
@@ -145,8 +144,7 @@ namespace QuickCalculator
                     break;
                 case 'v':
                 case 'a':
-                    if (inquireSymbols) InquireVariable();
-                    else if (localVariables.LocalsContains(token.GetToken()))
+                    if (localVariables.LocalsContains(token.GetToken()))
                     {   // Check if this variable is defined locally, since local variables should overshadow globals
                         value = localVariables.GetLocal(token.GetToken());
                     }
@@ -160,8 +158,7 @@ namespace QuickCalculator
                     }
                     break;
                 case 'f':
-                    if (inquireSymbols) InquireFunction();
-                    else value = ParseFunction();
+                    value = ParseFunction();
                     break;
                 case '?':
                     ParseInquiry();
@@ -179,50 +176,23 @@ namespace QuickCalculator
         /// Parses a function token and arguments. Executes the function if needed.
         /// </summary>
         /// <returns></returns> If the function should be executed, returns the result of the function call. If not, returns 1 as a dummy value.
-        private double ParseFunction()
+        private double ParseFunction(bool inquireFunction = false)
         {
             FunctionToken functionToken = (FunctionToken)tokens[currentIndex];
-            List<double> arguments = ParseArguments(functionToken);  // Populate arguments list
+            Function function = (Function)SymbolTable.functions[functionToken.GetToken()];
 
-            if(arguments == null)
-            {   // This has already added an exception inside of ParseArguments()
-                return 1;
-            }
+            List<double> arguments = PrepareArguments(functionToken);
 
-            if (!SymbolTable.functions.Contains(functionToken.GetToken()))
-            {   // functionToken is not in the functions hash table
-                ExceptionController.AddException("Undefined function '" + functionToken.GetToken() + "'.", functionToken.GetStart(), functionToken.GetEnd(), 'P');
-                return 1;
+            if (executeFunctions && ExceptionController.Count() == 0)
+            {   // Only execute the function if this Evaluator is set to execute functions and there have been no exceptions
+                return function.Execute(arguments);
             }
             else
-            {   
-                Function function = (Function) SymbolTable.functions[functionToken.GetToken()];
-
-                int expectedArgCount = function.GetNumArgs();
-                int actualArgCount = arguments.Count();
-
-                if (actualArgCount != expectedArgCount)
-                {
-                    ExceptionController.AddException("Function '" + functionToken.GetToken() + "' requires " +
-                                            expectedArgCount + " arguments, received " + actualArgCount + ".",
-                                            functionToken.GetStart(), functionToken.GetEnd(), 'P');
-                }
-
-                if (inquireSymbols)
-                {
-                    InquireParameteredFunction();
-                    return 1;
-                }
-                else if (executeFunctions && ExceptionController.Count() == 0)
-                {   // Only execute the function if this Evaluator is set to execute functions and there have been no exceptions
-                    return function.Execute(arguments);
-                }
-                else
-                {   // Otherwise just return a dummy value of 1. The user won't see the result in this case anyway.
-                    return 1;
-                }
-
+            {   // Otherwise just return a dummy value of 1. The user won't see the result in this case anyway.
+                return 1;
             }
+
+            
         }
 
         /// <summary>
@@ -273,25 +243,55 @@ namespace QuickCalculator
             return arguments;
         }
 
+        private List<double> PrepareArguments(FunctionToken functionToken)
+        {
+            Function function = (Function)SymbolTable.functions[functionToken.GetToken()];
+            List<double> arguments = ParseArguments(functionToken);  // Populate arguments list
+
+            if (arguments == null)
+            {   // This has already added an exception inside of ParseArguments()
+                return null;
+            }
+
+            if (!SymbolTable.functions.Contains(functionToken.GetToken()))
+            {   // functionToken is not in the functions hash table
+                ExceptionController.AddException("Undefined function '" + functionToken.GetToken() + "'.", functionToken.GetStart(), functionToken.GetEnd(), 'P');
+                return null;
+            }
+
+
+            int expectedArgCount = function.GetNumArgs();
+            int actualArgCount = arguments.Count();
+
+            if (actualArgCount != expectedArgCount)
+            {
+                ExceptionController.AddException("Function '" + functionToken.GetToken() + "' requires " +
+                                        expectedArgCount + " arguments, received " + actualArgCount + ".",
+                                        functionToken.GetStart(), functionToken.GetEnd(), 'P');
+                return null;
+            }
+
+            return arguments;
+        }
+
         private void ParseInquiry()
         {
-            if (inquireSymbols) {
-                ExceptionController.AddException("Redundant inquiry operator '?' nested within another inquiry.", currentIndex, currentIndex + 1, 'P');
-                return;
-            }
             if (currentIndex == tokens.Count() - 1)
             {
                 ExceptionController.AddException("Inquiry operator '?' needs an expression to inquire.", currentIndex, currentIndex + 1, 'P');
                 return;
             }
+            if (tokens[currentIndex + 1].GetCategory() != 'v' && tokens[currentIndex + 1].GetCategory() != 'f')
+            {
+                ExceptionController.AddException("Inquiry operator '?' must immediately precede a variable or custom function", currentIndex, currentIndex + 1, 'P');
+                return;
+            }
 
             if (executeFunctions)
             {
-                tokens.RemoveAt(currentIndex);            // Remove the '?' token
-                // Don't need to advance currentIndex before parsing because we have removed the '?' token
-                inquireSymbols = true;
-                ParsePrimary();
-                inquireSymbols = false;
+                tokens.RemoveAt(currentIndex);  // Remove the '?' token
+                if (tokens[currentIndex].GetCategory() == 'v') InquireVariable();
+                else InquireFunction();
             }
         }
 
@@ -307,16 +307,12 @@ namespace QuickCalculator
             }
             Variable variable = (Variable)SymbolTable.variables[token.GetToken()];
             List<Token> variableTokens = variable.GetTokens();
-            tokens.Insert(currentIndex++, new Token("(", '(', 0, 0));       // Add '(' token
             InsertTokens(variableTokens);
-            tokens.Insert(currentIndex, new Token(")", ')', 0, 0));         // Add ')' token
-            // Don't increment currentIndex because it will be incremented by ParsePrimary
         }
 
         private void InquireFunction()
         {
             Token token = tokens[currentIndex];
-            tokens.RemoveAt(currentIndex);            // Remove the function token
 
             if (!SymbolTable.functions.ContainsKey(token.GetToken()))
             {
@@ -331,33 +327,47 @@ namespace QuickCalculator
                 return;
             }
 
-            CustomFunction function = (CustomFunction)SymbolTable.functions[token.GetToken()];
+            CustomFunction customFunction = (CustomFunction)SymbolTable.functions[token.GetToken()];
 
-
-
-            tokens.RemoveAt(currentIndex); // Remove the function token
             if (tokens[currentIndex + 1].GetCategory() == '[' && tokens[currentIndex + 2].GetCategory() == ']')
             {   // Check if this function token has no arguments. If so, the user wants the raw function definition
-                InsertTokens(function.GetTokens());
+                tokens.RemoveAt(currentIndex);
+                InsertTokens(customFunction.GetTokens());
                 return;
             }
             else
             {
-                ParseFunction();
+                int startIndex = currentIndex;
+                FunctionToken functionToken = (FunctionToken)token;
+                int level = functionToken.GetLevel();
+                List<double> arguments = PrepareArguments(functionToken);
+                currentIndex = startIndex;      // Move currentIndex back to the function token
+                tokens.RemoveAt(currentIndex);  // Remove the function token
+                InsertTokens(customFunction.Inquire(arguments));
+
+                currentIndex++;
+                while (true)
+                {
+                    Token currentToken = tokens[currentIndex];
+                    tokens.RemoveAt(currentIndex);
+                    if(currentToken.GetCategory()==']' && ((LevelToken)currentToken).GetLevel() == level)
+                    {
+                        break;
+                    }
+                }
+                return;
             }
         }
 
-        private void InquireParameteredFunction()
+        private void InsertTokens(List<Token> newTokens)
         {
-            Parser functionParser = new Parser()
-        }
-
-        private void InsertTokens(List<Token> tokens)
-        {
-            for (int i = 0; i < tokens.Count; i++)
+            tokens.Insert(currentIndex++, new Token("(", '(', 0, 0));       // Add '(' token
+            for (int i = 0; i < newTokens.Count; i++)
             {
-                tokens.Insert(currentIndex++, tokens[i]);
+                tokens.Insert(currentIndex++, newTokens[i]);
             }
+            tokens.Insert(currentIndex, new Token(")", ')', 0, 0));         // Add ')' token
+            // Don't increment currentIndex because it will be incremented by ParsePrimary
         }
 
 

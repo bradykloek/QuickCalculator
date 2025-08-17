@@ -70,24 +70,50 @@ namespace QuickCalculator
         }
         public override double Execute(List<double> args)
         {
-            if(tokens == null)
+            SymbolTable localVariables = PairArguments(args);
+            if (localVariables != null)
             {
-                ExceptionController.AddException("Custom Function '" + name + "' not given definition tokens.", 0,0, 'F');
+                Parser functionParser = new Parser(tokens, true, localVariables);
+                return functionParser.GetResult();
             }
-
-            if(args.Count() != parameters.Count())
-            {
-                ExceptionController.AddException("Custom Function '" + name + "' expected " + parameters.Count() + 
-                                        " arguments, received " + args.Count(), 0, 0, 'F');
-                return 1;
-            }
-
-            Parser functionParser = new Parser(tokens, true, AssignVariables(args));
-            return functionParser.GetResult();
+            return 1;
         }
 
-        public SymbolTable AssignVariables(List<double> args)
+
+        public List<Token> Inquire(List<double> args)
         {
+            SymbolTable localVariables = PairArguments(args);
+            List<Token> inquiredTokens = new List<Token>();
+            for(int i = 0; i < tokens.Count(); i++)
+            {
+                Token token = tokens[i];
+                if(token.GetCategory() == 'a')
+                {
+                    inquiredTokens.Add(new Token(localVariables.GetLocal(token.GetToken()).ToString(),'n',0,0));
+                }
+                else
+                {
+                    inquiredTokens.Add(tokens[i]);
+                }
+            }
+            return inquiredTokens;
+        }
+
+        private SymbolTable PairArguments(List<double> args)
+        {
+            if (tokens == null)
+            {
+                ExceptionController.AddException("Custom Function '" + name + "' not given definition tokens.", 0, 0, 'F');
+                return null;
+            }
+
+            if (args.Count() != parameters.Count())
+            {
+                ExceptionController.AddException("Custom Function '" + name + "' expected " + parameters.Count() +
+                                        " arguments, received " + args.Count(), 0, 0, 'F');
+                return null;
+            }
+
             SymbolTable localVariables = new SymbolTable();
             // First we must assign all of the arguments to the correct parameters as local variables
             for (int i = 0; i < parameters.Count(); i++)

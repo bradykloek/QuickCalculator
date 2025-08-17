@@ -25,6 +25,11 @@ namespace QuickCalculator
         {
             return name;
         }
+
+        public List<Token> GetTokens()
+        {
+            return tokens;
+        }
         public void SetTokens(List<Token> tokens)
         {
             this.tokens = tokens;
@@ -77,15 +82,19 @@ namespace QuickCalculator
                 return 1;
             }
 
+            Parser functionParser = new Parser(tokens, true, AssignVariables(args));
+            return functionParser.GetResult();
+        }
+
+        public SymbolTable AssignVariables(List<double> args)
+        {
             SymbolTable localVariables = new SymbolTable();
             // First we must assign all of the arguments to the correct parameters as local variables
             for (int i = 0; i < parameters.Count(); i++)
-            {   
+            {
                 localVariables.AddLocal(parameters[i].GetToken(), args[i]);
             }
-
-            Parser functionParser = new Parser(tokens, true, localVariables);
-            return functionParser.GetResult();
+            return localVariables;
         }
 
         public override string ToString()

@@ -40,13 +40,20 @@ namespace QuickCalculator
 
                 Evaluator evaluator = new Evaluator(inputTextBox.Text, true, roundPrecision);
 
-                if (ExceptionController.Count() == 0)
+
+
+                if (ExceptionController.Count() != 0)
                 {
-                    System.Windows.Forms.MessageBox.Show(evaluator.ToString());
+                    System.Windows.Forms.MessageBox.Show(ExceptionController.ErrorMessage());
+
+                }
+                else if (evaluator.GetIncludesInquiry())
+                {
+                    inputTextBox.Text = evaluator.TokenString();
                 }
                 else
                 {
-                    System.Windows.Forms.MessageBox.Show(ExceptionController.ErrorMessage());
+                    System.Windows.Forms.MessageBox.Show(evaluator.ToString());
                 }
 
             }
@@ -141,11 +148,6 @@ namespace QuickCalculator
                         break;
                 }
             }
-        }
-        
-        private void inputTextBox_KeyPress(object sender, KeyPressEventArgs e)
-        {
-
         }
     }
 }

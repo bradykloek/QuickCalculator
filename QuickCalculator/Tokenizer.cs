@@ -12,8 +12,9 @@ namespace QuickCalculator
     {
         private string input;                       // The raw string input
         private List<Token> tokens;                 // Stores the tokens that get created
-        string assignVariable = "";
-        CustomFunction defineFunction = null;
+        private string assignVariable = "";
+        private CustomFunction defineFunction = null;
+        private bool includesInquiry = false;
 
         private static char[] operators = { '+', '-', '*', '/', '^', '%', '!', '=' };
 
@@ -55,6 +56,11 @@ namespace QuickCalculator
         public CustomFunction GetDefineFunction()
         {
             return defineFunction;
+        }
+
+        public bool GetIncludesInquiry()
+        {
+            return includesInquiry;
         }
 
 
@@ -213,13 +219,19 @@ namespace QuickCalculator
                 addToken = new LevelToken(",", ',', currentIndex, currentIndex + 1, functionLevel);
                 tokenFinished = true;
             }
+            else if (current == '?')
+            {
+                includesInquiry = true;
+                category = '?';
+                tokenFinished = true;
+            }
             else
             {
                 // Any other character is invalid for the start of a token
                 ExceptionController.AddException("Invalid character '" + current + "' for start of token.", currentIndex, currentIndex + 1, 'T');
                 tokenFinished = true;
             }
-            ImplicitMultiplication();   // We need to check for implicit multiplication at the end of this function so the current token is categorized
+            ImplicitMultiplication();   // The implicit multiplication check needs to be at the end of this function so the current token is properly categorized first
             return tokenFinished;
         }
 

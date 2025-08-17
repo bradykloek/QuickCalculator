@@ -10,7 +10,6 @@ namespace QuickCalculator
     internal abstract class Function
     {
         public abstract int GetNumArgs();
-
         public abstract double Execute(List<double> args); 
     }
 }

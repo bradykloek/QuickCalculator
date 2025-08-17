@@ -24,9 +24,9 @@ namespace QuickCalculator
 
             tokenizer = new Tokenizer(input);
 
-            if (tokenizer.GetAssignVariable() != "")
+            if (executeInput && tokenizer.GetAssignVariable() != "")
                 PerformAssignment(tokenizer.GetAssignVariable());
-            else if (tokenizer.GetDefineFunction() != null)
+            else if (executeInput && tokenizer.GetDefineFunction() != null)
                 DefineCustomFunction(tokenizer.GetDefineFunction());
             else if (ExceptionController.Count() == 0)
             {
@@ -42,7 +42,7 @@ namespace QuickCalculator
             SetResult(assignmentParser.GetResult());
             if (ExceptionController.Count() == 0)
             {
-                SymbolTable.variables[variableName] = result;
+                SymbolTable.variables[variableName] = new Variable(result, tokenizer.GetTokens());
             }
 
             outputString = variableName + " = " + result;
@@ -85,9 +85,25 @@ namespace QuickCalculator
             return outputString;
         }
 
+        public string TokenString()
+        {
+            List<Token> tokens = tokenizer.GetTokens();
+            StringBuilder sb = new StringBuilder();
+            for (int i = 0; i < tokens.Count(); i++)
+            {
+                sb.Append(tokens[i] + " ");
+            }
+            return sb.ToString();
+        }
+
         public List<Token> GetTokens()
         {
             return tokenizer.GetTokens();
+        }
+
+        public bool GetIncludesInquiry()
+        {
+            return tokenizer.GetIncludesInquiry();
         }
     }
 }

@@ -22,7 +22,7 @@ namespace QuickCalculator
         private double result;
         private SymbolTable localVariables;
         private bool executeFunctions;
-
+        private bool inquireSymbols;
 
         /// <summary>
         /// Initializes a Parser using a completed token list. This will parse and evaluate the tokens,
@@ -31,19 +31,18 @@ namespace QuickCalculator
         /// <param name="tokens"></param>
         /// 
 
-        public Parser(List<Token> tokens, bool executeFunctions, SymbolTable localVariables)
+        public Parser(List<Token> tokens, bool executeFunctions, SymbolTable localVariables, bool inquireSymbols = false)
         {
             this.localVariables = localVariables;
             this.tokens = tokens;
+            this.inquireSymbols = inquireSymbols;
             currentIndex = 0;
             this.executeFunctions = executeFunctions;
             result = ParseExpression();
         }
 
-        public Parser(List<Token> tokens, bool executeFunctions) 
-            : this(tokens, executeFunctions, new SymbolTable()) {   }
-
-
+        public Parser(List<Token> tokens, bool executeFunctions, bool inquireSymbols = false) 
+            : this(tokens, executeFunctions, new SymbolTable(), inquireSymbols) {   }
 
         /// <summary>
         /// Checks that the current token (tokens[i]) is the same as matchWith. Avoids out of bounds errors.
@@ -90,7 +89,7 @@ namespace QuickCalculator
                         left = left % right;
                         if(left < 0)
                         {
-                            left += right;  // C# % is actually remainder instead of modulo. This changes it to modulo behavior
+                            left += right;  // C#'s % is actually remainder instead of modulo. This changes it to modulo behavior
                         }
                         break;
                     case "//":
@@ -103,7 +102,8 @@ namespace QuickCalculator
 
         private double ParseFactor()
         {
-            double left = ParsePrimary();
+            double left = ParsePrimary(
+                );
             while (MatchToken("^") || MatchToken("!"))
             {
                 string op = tokens[currentIndex].GetToken();
@@ -145,13 +145,14 @@ namespace QuickCalculator
                     break;
                 case 'v':
                 case 'a':
-                    if (localVariables.LocalsContains(token.GetToken()))
-                    {   // First check if this variable is defined locally, since local variables should overshadow globals
-                        value = (double)localVariables.GetLocal(token.GetToken());
+                    if (inquireSymbols) InquireVariable();
+                    else if (localVariables.LocalsContains(token.GetToken()))
+                    {   // Check if this variable is defined locally, since local variables should overshadow globals
+                        value = localVariables.GetLocal(token.GetToken());
                     }
                     else if (SymbolTable.variables.Contains(token.GetToken()))
                     {
-                        value = (double)SymbolTable.variables[token.GetToken()];
+                        value = ((Variable)SymbolTable.variables[token.GetToken()]).GetValue();
                     }
                     else
                     {
@@ -159,7 +160,11 @@ namespace QuickCalculator
                     }
                     break;
                 case 'f':
-                    value = ParseFunction();
+                    if (inquireSymbols) InquireFunction();
+                    else value = ParseFunction();
+                    break;
+                case '?':
+                    ParseInquiry();
                     break;
                 default:
                     // If the switch falls to the default, there was a token we didn't account for.
@@ -203,8 +208,12 @@ namespace QuickCalculator
                                             functionToken.GetStart(), functionToken.GetEnd(), 'P');
                 }
 
-
-                if (executeFunctions && ExceptionController.Count() == 0)
+                if (inquireSymbols)
+                {
+                    InquireParameteredFunction();
+                    return 1;
+                }
+                else if (executeFunctions && ExceptionController.Count() == 0)
                 {   // Only execute the function if this Evaluator is set to execute functions and there have been no exceptions
                     return function.Execute(arguments);
                 }
@@ -263,6 +272,95 @@ namespace QuickCalculator
 
             return arguments;
         }
+
+        private void ParseInquiry()
+        {
+            if (inquireSymbols) {
+                ExceptionController.AddException("Redundant inquiry operator '?' nested within another inquiry.", currentIndex, currentIndex + 1, 'P');
+                return;
+            }
+            if (currentIndex == tokens.Count() - 1)
+            {
+                ExceptionController.AddException("Inquiry operator '?' needs an expression to inquire.", currentIndex, currentIndex + 1, 'P');
+                return;
+            }
+
+            if (executeFunctions)
+            {
+                tokens.RemoveAt(currentIndex);            // Remove the '?' token
+                // Don't need to advance currentIndex before parsing because we have removed the '?' token
+                inquireSymbols = true;
+                ParsePrimary();
+                inquireSymbols = false;
+            }
+        }
+
+        private void InquireVariable()
+        {
+            Token token = tokens[currentIndex];
+            tokens.RemoveAt(currentIndex);            // Remove the variable token
+            if (!SymbolTable.variables.ContainsKey(token.GetToken()))
+            {
+                ExceptionController.AddException("Cannot inquire on undefined variable '" + token.GetToken() + "'.",
+                                                    token.GetStart(), token.GetEnd(), 'P');
+                return;
+            }
+            Variable variable = (Variable)SymbolTable.variables[token.GetToken()];
+            List<Token> variableTokens = variable.GetTokens();
+            tokens.Insert(currentIndex++, new Token("(", '(', 0, 0));       // Add '(' token
+            InsertTokens(variableTokens);
+            tokens.Insert(currentIndex, new Token(")", ')', 0, 0));         // Add ')' token
+            // Don't increment currentIndex because it will be incremented by ParsePrimary
+        }
+
+        private void InquireFunction()
+        {
+            Token token = tokens[currentIndex];
+            tokens.RemoveAt(currentIndex);            // Remove the function token
+
+            if (!SymbolTable.functions.ContainsKey(token.GetToken()))
+            {
+                ExceptionController.AddException("Cannot inquire on undefined function '" + token.GetToken() + "'.",
+                                                    token.GetStart(), token.GetEnd(), 'P');
+                return;
+            }
+            if(!(SymbolTable.functions[token.GetToken()] is CustomFunction))
+            {
+                ExceptionController.AddException("Cannot inquire on primitive function '" + token.GetToken() + "'. Inquiry can only be " +
+                                                    "done to custom functions and variables.", token.GetStart(), token.GetEnd(), 'P');
+                return;
+            }
+
+            CustomFunction function = (CustomFunction)SymbolTable.functions[token.GetToken()];
+
+
+
+            tokens.RemoveAt(currentIndex); // Remove the function token
+            if (tokens[currentIndex + 1].GetCategory() == '[' && tokens[currentIndex + 2].GetCategory() == ']')
+            {   // Check if this function token has no arguments. If so, the user wants the raw function definition
+                InsertTokens(function.GetTokens());
+                return;
+            }
+            else
+            {
+                ParseFunction();
+            }
+        }
+
+        private void InquireParameteredFunction()
+        {
+            Parser functionParser = new Parser()
+        }
+
+        private void InsertTokens(List<Token> tokens)
+        {
+            for (int i = 0; i < tokens.Count; i++)
+            {
+                tokens.Insert(currentIndex++, tokens[i]);
+            }
+        }
+
+
 
 
         public double GetResult()

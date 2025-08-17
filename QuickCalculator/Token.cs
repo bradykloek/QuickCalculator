@@ -19,6 +19,7 @@ namespace QuickCalculator
                                     *      f = Function
                                     *      ( = Open Parenthesis
                                     *      ) = Closed Parenthesis
+                                    *      q = Quick Calculator controls
                                     */
 
         private int inputStart, inputEnd; // Store the indexes of the input string that comprise this token. [start, end)

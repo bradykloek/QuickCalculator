@@ -222,8 +222,15 @@ namespace QuickCalculator
             else if (current == '?')
             {
                 includesInquiry = true;
-                category = '?';
-                tokenFinished = true;
+                TokenizeInquiry();
+
+                /* In all cases of TokenizeInquiry(), we want to skip past the '?' character without adding it as a token
+                 * and start fresh tokenizing the next character, so we will reset the token status and then return 'false' 
+                 * to continue tokenizing without adding a new token. */
+                
+                category = '\0'; // Change the category to indicate that we are starting a new token
+                token = "";
+                tokenFinished = false;
             }
             else
             {
@@ -314,9 +321,10 @@ namespace QuickCalculator
                     case 'o':
                     case '(':
                     case '[':
-                        category = 'n';     // It should be interpreted as a number isntead of an operator
-                        token = "-0";       // Change token to avoid it causing errors when it is parsed as a double
-                        return false;
+                    case ',':
+                        // Unary Negation is tokenized with the special category '-' (instead of the typical operator 'o')
+                        category = '-';
+                        return true;
                 }
  
             }
@@ -383,6 +391,70 @@ namespace QuickCalculator
                 }
                 addToken = new LevelToken(token, category, tokenStart, currentIndex + 1, functionLevel--);
             }
+        }
+
+        private void TokenizeInquiry()
+        {
+            if(tokens.Count() >= 1 && tokens[tokens.Count()-1].GetCategory() == 'v')
+            {
+                VariableInquiry();
+            }            
+            else if(tokens.Count() >= 3 && tokens[tokens.Count() - 1].GetCategory() == ']')
+            {
+                PrepareFunctionInquiry();
+            }
+            else
+            {
+                ExceptionController.AddException("Inquiry operator '?' can only be used after a Variable, Custom Function with the correct number of arguments," +
+                                                " or Custom Function with zero arguments.", currentIndex, currentIndex + 1, 'T');
+            }
+        }
+
+        private void VariableInquiry()
+        {
+            Token token = tokens[tokens.Count() - 1];
+            if (!SymbolTable.variables.Contains(token.GetToken()))
+            {
+                ExceptionController.AddException("Cannot inquire on undefined variable '" + token + "'.", token.GetStart(), currentIndex + 1, 'T');
+                return;
+            }
+
+            Variable variable = (Variable)SymbolTable.variables[tokens[tokens.Count() - 1].GetToken()];
+            tokens.RemoveAt(tokens.Count() - 1);    // Remove the variable token
+            tokens.Add(new LevelToken("(", '(', 0, 0, ++parenLevel));     // Add '('
+            tokens.AddRange(variable.GetTokens());      // Add variable's tokens
+            tokens.Add(new LevelToken(")", ')', 0, 0, parenLevel--));
+            
+
+        }
+
+        private void PrepareFunctionInquiry()
+        {
+            LevelToken closedBracket = (LevelToken)tokens[tokens.Count() - 1];
+            int i;
+            for(i = tokens.Count() - 2; i >= 0; i--)
+            {
+                if (tokens[i].GetCategory() == 'f' && ((FunctionToken)tokens[i]).GetLevel() == closedBracket.GetLevel())
+                {   // Searches for the function token that matches this closed bracket
+                    break;
+                }
+            }
+
+            FunctionToken functionToken = (FunctionToken)tokens[i];
+
+            if (!SymbolTable.functions.Contains(functionToken.GetToken()))
+            {
+                ExceptionController.AddException("Cannot inquire on undefined function '" + functionToken + "'.", functionToken.GetStart(), currentIndex + 1, 'T');
+                return;
+            }
+            if (SymbolTable.functions[functionToken.GetToken()] is PrimitiveFunction)
+            {
+                ExceptionController.AddException("Cannot inquire on '"+functionToken+"': Primitive Functions cannot be inquired.", functionToken.GetStart(), currentIndex + 1, 'T');
+                return;
+            }
+
+            // If the function token is valid for inquiry, insert a '?' token immediately before it. This will signal the Parser to inquire it.
+            tokens.Insert(i, new Token("?", '?', 0, 0));
         }
 
         /// <summary>

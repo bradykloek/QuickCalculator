@@ -118,7 +118,7 @@ namespace QuickCalculator
             for (int i = 0; i < tokens.Count(); i++)
             {
                 int tokenStart = tokens[i].GetStart();
-                int tokenLength = tokens[i].GetEnd() - tokenStart ; // Exclusive on right, so -1
+                int tokenLength = tokens[i].GetEnd() - tokenStart ;
                 switch (tokens[i].GetCategory())
                 {
                     case '(':

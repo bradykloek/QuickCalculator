@@ -17,8 +17,9 @@ namespace QuickCalculator
     {
         public static Hashtable variables = new Hashtable
         {
-            {"pi", new Variable(Math.PI)},
-            {"e", new Variable(Math.E)}
+            {"pi", new Variable(Double.Pi)},
+            {"e", new Variable(Double.E)},
+            {"inf", new Variable(Double.PositiveInfinity)}
         };
 
         public static Hashtable functions = new Hashtable

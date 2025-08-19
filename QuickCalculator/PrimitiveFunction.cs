@@ -10,17 +10,17 @@ namespace QuickCalculator
     internal class PrimitiveFunction : Function
     {
         private Func<List<double>, double> function;
-        private int numArgs;
+        private int numParameters;
 
-        public PrimitiveFunction(int numArgs, Func<List<double>, double> function)
+        public PrimitiveFunction(int numParameters, Func<List<double>, double> function)
         {
-            this.numArgs = numArgs;
+            this.numParameters = numParameters;
             this.function = function;
         }
 
-        public override int GetNumArgs()
+        public override int GetNumParameters()
         {
-            return numArgs;
+            return numParameters;
         }
 
         public override double Execute(List<double> args)

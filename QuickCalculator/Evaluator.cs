@@ -24,27 +24,24 @@ namespace QuickCalculator
 
             tokenizer = new Tokenizer(input);
 
-            if (executeInput && tokenizer.GetAssignVariable() != "")
-                PerformAssignment(tokenizer.GetAssignVariable());
-            else if (executeInput && tokenizer.GetDefineFunction() != null)
+
+            if (tokenizer.GetDefineFunction() != null)
                 DefineCustomFunction(tokenizer.GetDefineFunction());
+
             else if (ExceptionController.Count() == 0)
             {
                 parser = new Parser(tokenizer.GetTokens(), executeInput);
                 SetResult(parser.GetResult());
+
+                if (executeInput && tokenizer.GetAssignVariable() != "")
+                    PerformAssignment(tokenizer.GetAssignVariable());
             }
 
         }
 
         private void PerformAssignment(string variableName)
         {
-            Parser assignmentParser = new Parser(tokenizer.GetTokens(), executeInput);
-            SetResult(assignmentParser.GetResult());
-            if (ExceptionController.Count() == 0)
-            {
-                SymbolTable.variables[variableName] = new Variable(result, tokenizer.GetTokens());
-            }
-
+            SymbolTable.variables[variableName] = new Variable(result, tokenizer.GetTokens());
             outputString = variableName + " = " + result;
         }
 
@@ -52,8 +49,8 @@ namespace QuickCalculator
         private void DefineCustomFunction(CustomFunction customFunction)
         {
             List<Token> tokens = tokenizer.GetTokens();
-            SymbolTable dummyParameters = customFunction.MarkParameters(tokens, customFunction != null);
-            Parser definitionParser = new Parser(tokens, false, dummyParameters);
+            customFunction.MarkParameters(tokens);
+            Parser definitionParser = new Parser(tokens, false, customFunction.GetLocals());
             // definitionParser is only used to check the syntax of the function definition-- its result doesn't mean anything
 
             if (executeInput)

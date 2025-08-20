@@ -42,7 +42,7 @@ namespace QuickCalculator
         private void PerformAssignment(string variableName)
         {
             SymbolTable.variables[variableName] = new Variable(result, tokenizer.GetTokens());
-            outputString = variableName + " = " + result;
+            outputString = variableName;
         }
 
 
@@ -72,14 +72,15 @@ namespace QuickCalculator
             outputString = result.ToString();
         }
 
+        public string Result()
+        {
+            if (tokenizer.GetIncludesInquiry())
+                return TokenString();
 
-        public double GetResult()
-        {
-            return result;
-        }
-        public string ToString()
-        {
-            return outputString;
+            if(outputString != "")
+                return outputString;
+
+            return result.ToString();
         }
 
         public string TokenString()
@@ -96,11 +97,6 @@ namespace QuickCalculator
         public List<Token> GetTokens()
         {
             return tokenizer.GetTokens();
-        }
-
-        public bool GetIncludesInquiry()
-        {
-            return tokenizer.GetIncludesInquiry();
         }
     }
 }

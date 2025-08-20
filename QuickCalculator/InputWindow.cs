@@ -37,34 +37,44 @@ namespace QuickCalculator
             if (e.KeyCode == Keys.Enter)
             {
                 e.SuppressKeyPress = true;
-
+                History.AddInput(inputTextBox.Text);
                 Evaluator evaluator = new Evaluator(inputTextBox.Text, true, roundPrecision);
 
-
-
                 if (ExceptionController.Count() != 0)
-                {
                     System.Windows.Forms.MessageBox.Show(ExceptionController.ErrorMessage());
-
-                }
-                else if (evaluator.GetIncludesInquiry())
-                {
-                    inputTextBox.Text = evaluator.TokenString();
-                }
                 else
-                {
-                    System.Windows.Forms.MessageBox.Show(evaluator.ToString());
-                }
+                    UpdateTextBox(evaluator.Result());
+            }
+            else if (e.KeyCode == Keys.Up)
+            {
+                e.SuppressKeyPress = true;
+
+                UpdateTextBox(History.RetrieveInput(-1, inputTextBox.Text));
+                historyInfo.Text = History.HistoryString();
+            }
+            else if (e.KeyCode == Keys.Down)
+            {
+                e.SuppressKeyPress = true;
+
+                UpdateTextBox(History.RetrieveInput(1, inputTextBox.Text));
+                historyInfo.Text = History.HistoryString();
 
             }
+
         }
 
         private void inputTextBox_TextChanged(object sender, EventArgs e)
         {
-            Evaluator evaluator = new Evaluator(inputTextBox.Text, false,0);
+            Evaluator evaluator = new Evaluator(inputTextBox.Text, false, 0);
 
             colorTokens(evaluator);
             colorErrors(evaluator);
+        }
+
+        private void UpdateTextBox(string content)
+        {
+            inputTextBox.Text = content;
+            inputTextBox.Select(content.Length, 0);
         }
 
         /// <summary>
@@ -111,14 +121,14 @@ namespace QuickCalculator
             // The only text that isn't a part of a token is for assignments, since the assignment operater and assignee variable are removed
             colorText(0, inputTextBox.Text.Length, ASSIGNMENT, FontStyle.Regular);
             List<Token> tokens = evaluator.GetTokens();
-            Color[] parenColors = { PAREN1, PAREN2, PAREN3};
-            Color[] funcColors = { FUNC1, FUNC2, FUNC3};
+            Color[] parenColors = { PAREN1, PAREN2, PAREN3 };
+            Color[] funcColors = { FUNC1, FUNC2, FUNC3 };
 
             int level;
             for (int i = 0; i < tokens.Count(); i++)
             {
                 int tokenStart = tokens[i].GetStart();
-                int tokenLength = tokens[i].GetEnd() - tokenStart ;
+                int tokenLength = tokens[i].GetEnd() - tokenStart;
                 switch (tokens[i].GetCategory())
                 {
                     case '(':

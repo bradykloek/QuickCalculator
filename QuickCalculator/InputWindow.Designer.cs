@@ -29,6 +29,8 @@
         private void InitializeComponent()
         {
             inputTextBox = new RichTextBox();
+            label1 = new Label();
+            historyInfo = new RichTextBox();
             SuspendLayout();
             // 
             // inputTextBox
@@ -39,27 +41,41 @@
             inputTextBox.Location = new Point(22, 26);
             inputTextBox.Margin = new Padding(6);
             inputTextBox.Name = "inputTextBox";
-            inputTextBox.Size = new Size(697, 55);
+            inputTextBox.Size = new Size(1055, 55);
             inputTextBox.TabIndex = 1;
             inputTextBox.Text = "";
             inputTextBox.TextChanged += inputTextBox_TextChanged;
             inputTextBox.KeyDown += inputTextBox_KeyDown;
+
             // 
-            // Form1
+            // historyInfo
+            // 
+            historyInfo.Location = new Point(1116, 26);
+            historyInfo.Name = "historyInfo";
+            historyInfo.ReadOnly = true;
+            historyInfo.Size = new Size(93, 55);
+            historyInfo.TabIndex = 3;
+            historyInfo.Text = "";
+            // 
+            // InputWindow
             // 
             AutoScaleDimensions = new SizeF(13F, 32F);
             AutoScaleMode = AutoScaleMode.Font;
             BackColor = Color.DarkGray;
-            ClientSize = new Size(745, 111);
+            ClientSize = new Size(1265, 110);
+            Controls.Add(historyInfo);
+            Controls.Add(label1);
             Controls.Add(inputTextBox);
             Margin = new Padding(6);
             Name = "InputWindow";
-            Text = "InputWindow";
             ResumeLayout(false);
+            PerformLayout();
         }
 
         #endregion
 
         private RichTextBox inputTextBox;
+        private Label label1;
+        private RichTextBox historyInfo;
     }
 }

@@ -17,6 +17,7 @@ namespace QuickCalculator
     {
         public static Hashtable variables = new Hashtable
         {
+            {"ans", new Variable(0) },
             {"pi", new Variable(Double.Pi)},
             {"e", new Variable(Double.E)},
             {"inf", new Variable(Double.PositiveInfinity)}
@@ -24,8 +25,8 @@ namespace QuickCalculator
 
         public static Hashtable functions = new Hashtable
         {
-            {"sqrt", new PrimitiveFunction(1, 
-                                        x => Math.Pow(x[0], 0.5)    
+            {"sqrt", new PrimitiveFunction(1,
+                                        x => Math.Pow(x[0], 0.5)
             )},
 
             {"log10", new PrimitiveFunction(1,
@@ -101,6 +102,20 @@ namespace QuickCalculator
                                                 result *= i;
                                             }
                                             return result;
+                                        }
+            )},
+
+            {"random", new PrimitiveFunction(0,
+                                        x => {
+                                            Random random = new Random();
+                                            return random.NextDouble();
+                                        }
+            )},
+
+            {"randomInt", new PrimitiveFunction(2,
+                                        x => {
+                                            Random random = new Random();
+                                            return random.Next((int)x[0],(int)x[1]+1);
                                         }
             )},
         };

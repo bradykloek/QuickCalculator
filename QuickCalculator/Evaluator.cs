@@ -28,7 +28,7 @@ namespace QuickCalculator
             if (tokenizer.GetDefineFunction() != null)
                 DefineCustomFunction(tokenizer.GetDefineFunction());
 
-            else if (ExceptionController.Count() == 0)
+            else if (ExceptionController.GetCount() == 0)
             {
                 parser = new Parser(tokenizer.GetTokens(), executeInput);
                 SetResult(parser.GetResult());
@@ -87,7 +87,7 @@ namespace QuickCalculator
         {
             List<Token> tokens = tokenizer.GetTokens();
             StringBuilder sb = new StringBuilder();
-            for (int i = 0; i < tokens.Count(); i++)
+            for (int i = 0; i < tokens.Count; i++)
             {
                 sb.Append(tokens[i] + " ");
             }

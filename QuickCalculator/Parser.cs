@@ -56,7 +56,7 @@ namespace QuickCalculator
 
         private double ParseExpression()
         {
-            if (tokens.Count() == 0) return 1;
+            if (tokens.Count == 0) return 1;
             double left = ParseTerm();
             while (MatchToken("+") || MatchToken("-"))
             {
@@ -124,7 +124,7 @@ namespace QuickCalculator
 
         private double ParsePrimary()
         {
-            if (currentIndex >= tokens.Count())
+            if (currentIndex >= tokens.Count)
             {
                 // If we have gone out of bounds of the Token List, there was an operator at the end of the string which thus didn't have enough operands
                 Token prevToken = tokens[currentIndex - 1];
@@ -195,14 +195,14 @@ namespace QuickCalculator
 
             List<double> arguments = ParseArguments();
 
-            if (arguments.Count() != function.GetNumParameters())
+            if (arguments.Count != function.GetNumParameters())
             {
                 ExceptionController.AddException("Function '" + functionToken + "' requires " +
-                                        function.GetNumParameters() + " arguments, received " + arguments.Count() + ".",
+                                        function.GetNumParameters() + " arguments, received " + arguments.Count + ".",
                                         functionToken.GetStart(), functionToken.GetEnd(), 'P');
             }
 
-            if (executeFunctions && ExceptionController.Count() == 0)
+            if (executeFunctions && ExceptionController.GetCount() == 0)
             {   // Only execute the function if this Evaluator is set to execute functions and there have been no exceptions
                 return function.Execute(arguments);
             }
@@ -227,7 +227,7 @@ namespace QuickCalculator
             currentIndex += 2;  // Move past '['
             List<double> arguments = new List<double>();
             List<Token> argumentTokens = new List<Token>();
-            while (currentIndex < tokens.Count())
+            while (currentIndex < tokens.Count)
             {   // End loop if we find a closing bracket of the same level as the function we are parsing
                 if (tokens[currentIndex].GetCategory() == ']' && ((LevelToken)tokens[currentIndex]).GetLevel() == functionToken.GetLevel()) break;
 
@@ -247,12 +247,12 @@ namespace QuickCalculator
                 currentIndex++; // Move past ']'
             }
 
-            if (currentIndex >= tokens.Count())
+            if (currentIndex >= tokens.Count)
             {   // If the loop didn't find a ']', there is an unmatched open bracket
                 ExceptionController.AddException("Unmatched open bracket.", currentIndex - 1, currentIndex - 1, 'P');
             }
 
-            if (argumentTokens.Count() > 0)
+            if (argumentTokens.Count > 0)
             {   // Add the last argument if it has at least one token
                 Parser parseArg = new Parser(argumentTokens, executeFunctions, localVariables);
                 arguments.Add(parseArg.GetResult());
@@ -290,7 +290,7 @@ namespace QuickCalculator
             List<double> arguments = ParseArguments();
             // ParseArguments will move currentIndex past the ']' that ends this function
 
-            if(arguments.Count() != 0 && arguments.Count() != customFunction.GetNumParameters())
+            if(arguments.Count != 0 && arguments.Count != customFunction.GetNumParameters())
             {
                 ExceptionController.AddException("A function call can only be inquired if it has no arguments or the exact number of arguments " +
                     "the function requires. '" +  token + "' requires " + customFunction.GetNumParameters() + " arguments.", token.GetStart(), token.GetEnd(), 'P');
@@ -302,7 +302,7 @@ namespace QuickCalculator
                 tokens.RemoveRange(functionStartIndex, currentIndex - functionStartIndex + 1);  // Remove the function tokens from the function to the ']'
                 tokens.Insert(functionStartIndex, new Token("(", '(', 0, 0));   // Add '(' token
                 tokens.InsertRange(functionStartIndex + 1, inquiryTokens);  // Add the inquiry tokens
-                currentIndex = functionStartIndex + inquiryTokens.Count() + 1;  // Move currentIndex past the '(' and inquiryTokens
+                currentIndex = functionStartIndex + inquiryTokens.Count + 1;  // Move currentIndex past the '(' and inquiryTokens
                 tokens.Insert(currentIndex, new Token(")", ')', 0, 0));   // Add ')' token
             }
         }
@@ -315,7 +315,7 @@ namespace QuickCalculator
         public string ToString()
         {
             StringBuilder sb = new StringBuilder();
-            for (int x = 0; x < tokens.Count(); x++)
+            for (int x = 0; x < tokens.Count; x++)
             {
                 if (x == currentIndex)
                 {

@@ -27,7 +27,7 @@ namespace QuickCalculator
             exceptions.Clear();
         }
 
-        public static int Count()
+        public static int GetCount()
         {
             return exceptions.Count;
         }
@@ -40,8 +40,8 @@ namespace QuickCalculator
         public static string ErrorMessage()
         {
             StringBuilder sb = new StringBuilder();
-            sb.Append("Evaluator encountered " + exceptions.Count() + " errors:\n");
-            for (int i = 0; i < exceptions.Count(); i++)
+            sb.Append("Evaluator encountered " + exceptions.Count + " errors:\n");
+            for (int i = 0; i < exceptions.Count; i++)
             {
                 sb.Append(" " + (i + 1) + ":   " + exceptions[i].ToString() + "\n");
             }

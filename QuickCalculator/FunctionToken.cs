@@ -33,7 +33,7 @@ namespace QuickCalculator
 
         public int GetNumArgs()
         {
-            return arguments.Count();
+            return arguments.Count;
         }
     }
 }

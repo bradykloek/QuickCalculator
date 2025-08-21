@@ -67,7 +67,7 @@ namespace QuickCalculator
         public string ToString()
         {
             StringBuilder sb = new StringBuilder();
-            for (int i = 0; i < tokens.Count(); i++)
+            for (int i = 0; i < tokens.Count; i++)
             {
                 if (i == currentIndex)
                 {
@@ -158,7 +158,7 @@ namespace QuickCalculator
              * Then we will remove this variable and the assignment operator from the tokens so the rest of the expression can be parsed normally.
              * We only do this if the Tokenizer hasn't encountered any errors.
              */
-            if (hasAssignment && ExceptionController.Count() == 0)
+            if (hasAssignment && ExceptionController.GetCount() == 0)
             {
                 PrepareAssignment();
             }
@@ -314,7 +314,7 @@ namespace QuickCalculator
             /* Before checking the other operators, we first must handle a special case for '-' 
              * to check if it should be the unary negation operator instead of subtraction.     */
             if (current == '-') {
-                char prevCategory = tokens.Count() > 0 ? tokens[tokens.Count - 1].GetCategory() : '\0';
+                char prevCategory = tokens.Count > 0 ? tokens[tokens.Count - 1].GetCategory() : '\0';
                 switch (prevCategory)
                 {
                     case '\0':
@@ -372,7 +372,7 @@ namespace QuickCalculator
 
             if (current == '[')
             {
-                if (tokens.Count() == 0 || tokens[tokens.Count() - 1].GetCategory() != 'f')
+                if (tokens.Count == 0 || tokens[tokens.Count - 1].GetCategory() != 'f')
                 {   // Brackets can only occur after a function token
                     ExceptionController.AddException("'[' must immediately follow a function name.", currentIndex, currentIndex + 1, 'T');
                     functionLevel = 0; // Avoid letting parenLevel be negative when the token is added, which would cause errores elsewhere
@@ -395,11 +395,11 @@ namespace QuickCalculator
 
         private void TokenizeInquiry()
         {
-            if(tokens.Count() >= 1 && tokens[tokens.Count()-1].GetCategory() == 'v')
+            if(tokens.Count >= 1 && tokens[tokens.Count-1].GetCategory() == 'v')
             {
                 VariableInquiry();
             }            
-            else if(tokens.Count() >= 3 && tokens[tokens.Count() - 1].GetCategory() == ']')
+            else if(tokens.Count >= 3 && tokens[tokens.Count - 1].GetCategory() == ']')
             {
                 PrepareFunctionInquiry();
             }
@@ -412,15 +412,15 @@ namespace QuickCalculator
 
         private void VariableInquiry()
         {
-            Token token = tokens[tokens.Count() - 1];
-            if (!SymbolTable.variables.Contains(token.GetToken()))
+            Token token = tokens[tokens.Count - 1];
+            if (!SymbolTable.variables.ContainsKey(token.GetToken()))
             {
                 ExceptionController.AddException("Cannot inquire on undefined variable '" + token + "'.", token.GetStart(), currentIndex + 1, 'T');
                 return;
             }
 
-            Variable variable = (Variable)SymbolTable.variables[tokens[tokens.Count() - 1].GetToken()];
-            tokens.RemoveAt(tokens.Count() - 1);    // Remove the variable token
+            Variable variable = (Variable)SymbolTable.variables[tokens[tokens.Count - 1].GetToken()];
+            tokens.RemoveAt(tokens.Count - 1);    // Remove the variable token
             tokens.Add(new LevelToken("(", '(', 0, 0, ++parenLevel));     // Add '('
             tokens.AddRange(variable.GetTokens());      // Add variable's tokens
             tokens.Add(new LevelToken(")", ')', 0, 0, parenLevel--));
@@ -430,9 +430,9 @@ namespace QuickCalculator
 
         private void PrepareFunctionInquiry()
         {
-            LevelToken closedBracket = (LevelToken)tokens[tokens.Count() - 1];
+            LevelToken closedBracket = (LevelToken)tokens[tokens.Count - 1];
             int i;
-            for(i = tokens.Count() - 2; i >= 0; i--)
+            for(i = tokens.Count - 2; i >= 0; i--)
             {
                 if (tokens[i].GetCategory() == 'f' && ((FunctionToken)tokens[i]).GetLevel() == closedBracket.GetLevel())
                 {   // Searches for the function token that matches this closed bracket
@@ -442,7 +442,7 @@ namespace QuickCalculator
 
             FunctionToken functionToken = (FunctionToken)tokens[i];
 
-            if (!SymbolTable.functions.Contains(functionToken.GetToken()))
+            if (!SymbolTable.functions.ContainsKey(functionToken.GetToken()))
             {
                 ExceptionController.AddException("Cannot inquire on undefined function '" + functionToken + "'.", functionToken.GetStart(), currentIndex + 1, 'T');
                 return;
@@ -463,13 +463,13 @@ namespace QuickCalculator
         /// </summary>
         private void CheckParentheses()
         {
-            for (int i = 0; i < tokens.Count(); i++)
+            for (int i = 0; i < tokens.Count; i++)
             {
                 bool matched = false;
                 if (tokens[i].GetCategory() == '(')
                 {
                     LevelToken openParen = (LevelToken)tokens[i];
-                    for (int j = i + 1; j < tokens.Count(); j++)
+                    for (int j = i + 1; j < tokens.Count; j++)
                     {
                         if (tokens[j].GetCategory() == ')')
                         {
@@ -493,7 +493,7 @@ namespace QuickCalculator
 
         private void ImplicitMultiplication()
         { 
-            if(tokens.Count() >= 1)
+            if(tokens.Count >= 1)
             {   // Implicit multiplication can only occur if there was at least one token prior to the current one
                 
                 switch (category)
@@ -502,7 +502,7 @@ namespace QuickCalculator
                     case 'v':
                     case 'f':
                     case '(':
-                        char prevCategory = tokens[tokens.Count() - 1].GetCategory();
+                        char prevCategory = tokens[tokens.Count - 1].GetCategory();
                         if (prevCategory == 'n' || prevCategory == 'v' || prevCategory == ']' || prevCategory == ')')
                         {
                             /* Add a new * token of length 0. We do this directly to the list instead of using AddToken because the current token may have
@@ -531,13 +531,13 @@ namespace QuickCalculator
              *  At least one operand must be a variable
              */
 
-            if (assignmentIdx == 0 || assignmentIdx == tokens.Count() - 1)
+            if (assignmentIdx == 0 || assignmentIdx == tokens.Count - 1)
             {   // Assignment operator is the first or last token
                 ExceptionController.AddException("Assignment needs two operands.", tokens[assignmentIdx].GetStart(), tokens[assignmentIdx].GetEnd(), 'T');
                 return;
             }
 
-            if  (assignmentIdx != 1     &&   assignmentIdx != tokens.Count() - 2)    // Assignment token is not second or second to last           
+            if  (assignmentIdx != 1     &&   assignmentIdx != tokens.Count - 2)    // Assignment token is not second or second to last           
             {
                 // Check if this is an attempt to define a user function
                 if (TokenizeCustomFunction(assignmentIdx)) return;
@@ -621,7 +621,7 @@ namespace QuickCalculator
             tokens.RemoveAt(0);     // Remove '['
 
             int parameterCount = 0;
-            while (tokens.Count() > 0)
+            while (tokens.Count > 0)
             {
                 if (tokens[0].GetCategory() == ']' && functionToken.GetLevel() == ((LevelToken)tokens[0]).GetLevel())
                 {   // Break the loop when we find the ']' that terminates this function token

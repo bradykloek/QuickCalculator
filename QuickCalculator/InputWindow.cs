@@ -40,7 +40,7 @@ namespace QuickCalculator
                 History.AddInput(inputTextBox.Text);
                 Evaluator evaluator = new Evaluator(inputTextBox.Text, true, roundPrecision);
 
-                if (ExceptionController.Count() != 0)
+                if (ExceptionController.GetCount() != 0)
                     System.Windows.Forms.MessageBox.Show(ExceptionController.ErrorMessage());
                 else
                     UpdateTextBox(evaluator.Result());
@@ -50,15 +50,12 @@ namespace QuickCalculator
                 e.SuppressKeyPress = true;
 
                 UpdateTextBox(History.RetrieveInput(-1, inputTextBox.Text));
-                historyInfo.Text = History.HistoryString();
             }
             else if (e.KeyCode == Keys.Down)
             {
                 e.SuppressKeyPress = true;
 
                 UpdateTextBox(History.RetrieveInput(1, inputTextBox.Text));
-                historyInfo.Text = History.HistoryString();
-
             }
 
         }
@@ -69,6 +66,8 @@ namespace QuickCalculator
 
             colorTokens(evaluator);
             colorErrors(evaluator);
+            historyInfo.Text = History.HistoryString();
+
         }
 
         private void UpdateTextBox(string content)
@@ -104,7 +103,7 @@ namespace QuickCalculator
         private void colorErrors(Evaluator evaluator)
         {
             List<EvaluationException> exceptions = ExceptionController.GetExceptions();
-            for (int i = 0; i < exceptions.Count(); i++)
+            for (int i = 0; i < exceptions.Count; i++)
             {
                 int start = exceptions[i].GetStart();
                 int end = exceptions[i].GetEnd();
@@ -125,7 +124,7 @@ namespace QuickCalculator
             Color[] funcColors = { FUNC1, FUNC2, FUNC3 };
 
             int level;
-            for (int i = 0; i < tokens.Count(); i++)
+            for (int i = 0; i < tokens.Count; i++)
             {
                 int tokenStart = tokens[i].GetStart();
                 int tokenLength = tokens[i].GetEnd() - tokenStart;

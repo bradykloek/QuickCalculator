@@ -57,9 +57,9 @@ namespace QuickCalculator
         /// Otherwise it will return an empty SymbolTable that won't be used.
         public void MarkParameters(List<Token> tokens)
         {
-            for (int i = 0; i < parameters.Count(); i++)
+            for (int i = 0; i < parameters.Count; i++)
             {
-                for(int j = 0; j < tokens.Count(); j++)
+                for(int j = 0; j < tokens.Count; j++)
                 {
                     if (parameters[i].GetToken().Equals(tokens[j].GetToken()))
                     {   // If this parameter matches this token, update the token's category to be an argument 
@@ -71,7 +71,7 @@ namespace QuickCalculator
 
         public override int GetNumParameters()
         {
-            return parameters.Count();
+            return parameters.Count;
         }
 
         public SymbolTable GetLocals()
@@ -102,14 +102,14 @@ namespace QuickCalculator
         /// <returns></returns> The resulting Token List of the inquiry
         public List<Token> Inquire(List<double> args)
         {
-            if(args.Count() == 0)
+            if(args.Count == 0)
             {   // If a function call with no parameters is inquired, we interpret it as the user inquiring on the raw tokens that defined the function
                 return tokens;
             }
 
             PairArguments(args);
             List<Token> inquiryTokens = new List<Token>();
-            for(int i = 0; i < tokens.Count(); i++)
+            for(int i = 0; i < tokens.Count; i++)
             {
                 Token token = tokens[i];
                 if(token.GetCategory() == 'a')
@@ -137,15 +137,15 @@ namespace QuickCalculator
                 return;
             }
 
-            if (args.Count() != parameters.Count())
+            if (args.Count != parameters.Count)
             {
-                ExceptionController.AddException("Custom Function '" + name + "' expected " + parameters.Count() +
-                                        " arguments, received " + args.Count(), 0, 0, 'F');
+                ExceptionController.AddException("Custom Function '" + name + "' expected " + parameters.Count +
+                                        " arguments, received " + args.Count, 0, 0, 'F');
                 return;
             }
 
             // First we must assign all of the arguments to the correct parameters as local variables
-            for (int i = 0; i < parameters.Count(); i++)
+            for (int i = 0; i < parameters.Count; i++)
             {
                 localVariables.AddLocal(parameters[i].GetToken(), args[i]);
             }
@@ -156,10 +156,10 @@ namespace QuickCalculator
             StringBuilder sb = new StringBuilder(name);
             sb.Append('[');
 
-            for (int i = 0; i < parameters.Count(); i++)
+            for (int i = 0; i < parameters.Count; i++)
             {
                 sb.Append(parameters[i]);
-                if(i < parameters.Count() - 1) sb.Append(',');
+                if(i < parameters.Count - 1) sb.Append(',');
             }
             sb.Append(']');
 

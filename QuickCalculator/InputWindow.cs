@@ -34,28 +34,42 @@ namespace QuickCalculator
             inputTextBox.SelectionColor = Color.White;
             inputTextBox.SelectionFont = new Font(inputTextBox.SelectionFont, FontStyle.Regular);
 
-            if (e.KeyCode == Keys.Enter)
+            switch (e.KeyCode)
             {
-                e.SuppressKeyPress = true;
-                History.AddInput(inputTextBox.Text);
-                Evaluator evaluator = new Evaluator(inputTextBox.Text, true, roundPrecision);
 
-                if (ExceptionController.GetCount() != 0)
-                    System.Windows.Forms.MessageBox.Show(ExceptionController.ErrorMessage());
-                else
-                    UpdateTextBox(evaluator.Result());
-            }
-            else if (e.KeyCode == Keys.Up)
-            {
-                e.SuppressKeyPress = true;
+                case Keys.Enter:
+                    e.SuppressKeyPress = true;
 
-                UpdateTextBox(History.RetrieveInput(-1, inputTextBox.Text));
-            }
-            else if (e.KeyCode == Keys.Down)
-            {
-                e.SuppressKeyPress = true;
+                    if (inputTextBox.Text.Length == 0) break;
 
-                UpdateTextBox(History.RetrieveInput(1, inputTextBox.Text));
+                    History.AddInput(inputTextBox.Text);
+                    Evaluator evaluator = new Evaluator(inputTextBox.Text, true, roundPrecision);
+
+                    if (ExceptionController.GetCount() != 0)
+                        System.Windows.Forms.MessageBox.Show(ExceptionController.ErrorMessage());
+                    else
+                        UpdateTextBox(evaluator.Result());
+                    break;
+                case Keys.Up:
+                    e.SuppressKeyPress = true;
+
+                    UpdateTextBox(History.RetrieveInput(-1, inputTextBox.Text));
+                    break;
+                case Keys.Down:
+                    e.SuppressKeyPress = true;
+
+                    UpdateTextBox(History.RetrieveInput(1, inputTextBox.Text));
+                    break;
+
+                case Keys.Back:
+                    if (e.Control && e.Alt)
+                    {
+                        UpdateTextBox("");
+                        History.MarkDeletion();
+                        System.Windows.Forms.MessageBox.Show("Deleted from History");
+
+                    }
+                    break;
             }
 
         }

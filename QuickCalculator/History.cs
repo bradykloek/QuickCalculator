@@ -26,9 +26,10 @@ namespace QuickCalculator
             if (change == 1) currentIndex += 1;
 
             inputs.Insert(currentIndex, input);
+
             tempIndices.Add(currentIndex);
 
-            for (int i = 0; i < tempIndices.Count; i++)
+            for (int i = 0; i < tempIndices.Count - 1; i++)
             {
                 if (tempIndices[i] > currentIndex) tempIndices[i]++;
             }
@@ -53,25 +54,18 @@ namespace QuickCalculator
 
         public static string RetrieveInput(int change, string input)
         {
-            if (inputs.Count == 0) return "";
+            if (inputs.Count == 0) return input;    // Don't make any changes
 
-
+            if (!input.Equals(inputs[currentIndex]))
+            {
+                InsertTemporary(change, input);
+            }
 
             int newIndex = currentIndex + change;
             if (0 <= newIndex && newIndex < inputs.Count)
             {
-                if (!input.Equals(inputs[currentIndex]))
-                {
-                    InsertTemporary(change, input);
-                }
-
                 currentIndex = newIndex;
                 return inputs[currentIndex];
-            }
-
-            if (tempIndices.Contains(currentIndex))
-            {
-
             }
 
             return inputs[currentIndex];

@@ -119,7 +119,7 @@ namespace QuickCalculator
         {
             while(NextChar())
             {
-                if (current.Equals(' ')) { // Whitespace is ignored entirely-- even for symbol names and numbers
+                if (current.Equals(' ') && category != 'v') { // Whitespace is ignored in all cases except for in variables, where it ends the variable token
                     continue;
                 }
 

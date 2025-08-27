@@ -3,8 +3,9 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using QuickCalculator.Tokens;
 
-namespace QuickCalculator
+namespace QuickCalculator.Symbols
 {
     internal class Variable
     {
@@ -21,7 +22,7 @@ namespace QuickCalculator
         {
             this.value = value;
             tokens = new List<Token>();
-            tokens.Add(new Token(value.ToString(), 'n', 0, 0));
+            tokens.Add(new Token(value.ToString(), TokenCategory.Number, 0, 0));
         }
 
         public double GetValue()

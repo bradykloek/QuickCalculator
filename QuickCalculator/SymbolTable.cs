@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using QuickCalculator.Symbols;
 
 namespace QuickCalculator
 {
@@ -15,7 +16,9 @@ namespace QuickCalculator
     /// </summary>
     internal class SymbolTable
     {
-        public static Hashtable variables = new Hashtable
+        private static Random random = new Random();
+
+        public static Dictionary<string, Variable> variables = new Dictionary<string, Variable>
         {
             {"ans", new Variable(0) },
             {"pi", new Variable(Double.Pi)},
@@ -23,7 +26,7 @@ namespace QuickCalculator
             {"inf", new Variable(Double.PositiveInfinity)}
         };
 
-        public static Hashtable functions = new Hashtable
+        public static Dictionary<string, CalculatorFunction> functions = new Dictionary<string,CalculatorFunction>
         {
             {"sqrt", new PrimitiveFunction(1,
                                         x => Math.Pow(x[0], 0.5)
@@ -107,24 +110,22 @@ namespace QuickCalculator
 
             {"random", new PrimitiveFunction(0,
                                         x => {
-                                            Random random = new Random();
                                             return random.NextDouble();
                                         }
             )},
 
             {"randomInt", new PrimitiveFunction(2,
                                         x => {
-                                            Random random = new Random();
                                             return random.Next((int)x[0],(int)x[1]+1);
                                         }
             )},
         };
 
-        private Hashtable localVariables;
+        private Dictionary<string, double> localVariables;
 
         public SymbolTable()
         {
-            localVariables = new Hashtable();
+            localVariables = new Dictionary<string, double>();
         }
 
         public void AddLocal(string variable, double value)
@@ -132,9 +133,9 @@ namespace QuickCalculator
             localVariables[variable] = value;
         }
 
-        public bool LocalsContains(object o)
+        public bool LocalsContains(string key)
         {
-            return localVariables.ContainsKey(o);
+            return localVariables.ContainsKey(key);
         }
 
         public double GetLocal(string variable)

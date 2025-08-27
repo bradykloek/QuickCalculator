@@ -1,48 +1,73 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Data;
 using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using QuickCalculator.Symbols;
+using QuickCalculator.Tokens;
 
-namespace QuickCalculator
+namespace QuickCalculator.Evaluation
 {
     internal class Evaluator
     {
         private bool executeInput;
         private double result;
         private Tokenizer tokenizer;
-        private Parser parser;
         private double roundPrecision;
-        private string outputString;
+        private string resultString;
 
-        public Evaluator(string input, bool executeInput, double roundPrecision)
+
+        public Evaluator(bool executeInput, double roundPrecision)
         {
             this.executeInput = executeInput;
             this.roundPrecision = roundPrecision;
             ExceptionController.ClearExceptions();
+        }
 
+        public void Evaluate(string input)
+        {
             tokenizer = new Tokenizer(input);
 
+            if (input.Length == 0) return;
 
-            if (tokenizer.GetDefineFunction() != null)
-                DefineCustomFunction(tokenizer.GetDefineFunction());
+            tokenizer.Tokenize();
+
+            Validator validator = new Validator(tokenizer.GetTokens());
+            validator.Validate();
+
+
+            if (validator.GetDefineFunction() != null)
+            {
+                DefineCustomFunction(validator.GetDefineFunction());
+                resultString = input;
+            }
 
             else if (ExceptionController.GetCount() == 0)
             {
-                parser = new Parser(tokenizer.GetTokens(), executeInput);
-                SetResult(parser.GetResult());
+                Parser parser = new Parser(tokenizer.GetTokens(), executeInput);
+                SetResult(parser.ParseExpression());
 
-                if (executeInput && tokenizer.GetAssignVariable() != "")
-                    PerformAssignment(tokenizer.GetAssignVariable());
+
+
+                if (executeInput && validator.GetIncludesInquiry())
+                {
+                    resultString = TokenString();
+                }
+
+                if (executeInput && validator.GetAssignVariable() != "")
+                {
+                    if(!validator.GetIncludesInquiry())
+                        PerformAssignment(validator.GetAssignVariable());
+                    resultString = validator.GetAssignVariable() + " = " + result;
+                }
             }
-
         }
 
         private void PerformAssignment(string variableName)
         {
             SymbolTable.variables[variableName] = new Variable(result, tokenizer.GetTokens());
-            outputString = variableName;
         }
 
 
@@ -51,15 +76,15 @@ namespace QuickCalculator
             List<Token> tokens = tokenizer.GetTokens();
             customFunction.MarkParameters(tokens);
             Parser definitionParser = new Parser(tokens, false, customFunction.GetLocals());
+            definitionParser.ParseExpression();
             // definitionParser is only used to check the syntax of the function definition-- its result doesn't mean anything
+
 
             if (executeInput)
             {   // Only if the user hit enter should we actually save this custom function
                 customFunction.SetTokens(tokens);
                 SymbolTable.functions[customFunction.GetName()] = customFunction;
             }
-
-            outputString = customFunction.ToString();
         }
 
         private void SetResult(double value)
@@ -69,18 +94,12 @@ namespace QuickCalculator
             {
                 result = Math.Round(value);
             }
-            outputString = result.ToString();
+            resultString = result.ToString();
         }
 
         public string Result()
         {
-            if (tokenizer.GetIncludesInquiry())
-                return TokenString();
-
-            if(outputString != "")
-                return outputString;
-
-            return result.ToString();
+            return resultString;
         }
 
         public string TokenString()

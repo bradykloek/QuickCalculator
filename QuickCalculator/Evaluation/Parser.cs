@@ -4,9 +4,11 @@ using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using QuickCalculator.Symbols;
+using QuickCalculator.Tokens;
 using static System.Runtime.InteropServices.JavaScript.JSType;
 
-namespace QuickCalculator
+namespace QuickCalculator.Evaluation
 {
     /// <summary>
     /// Implements a Recursive Descent algorithm to parse expressions
@@ -20,7 +22,6 @@ namespace QuickCalculator
     {
         private List<Token> tokens;
         private int currentIndex;
-        private double result;
         private SymbolTable localVariables;
         private bool executeFunctions;
 
@@ -37,7 +38,6 @@ namespace QuickCalculator
             this.tokens = tokens;
             currentIndex = 0;
             this.executeFunctions = executeFunctions;
-            result = ParseExpression();
         }
 
         public Parser(List<Token> tokens, bool executeFunctions) 
@@ -54,7 +54,7 @@ namespace QuickCalculator
             return tokens[currentIndex].GetToken().Equals(matchWith);
         }
 
-        private double ParseExpression()
+        public double ParseExpression()
         {
             if (tokens.Count == 0) return 1;
             double left = ParseTerm();
@@ -135,37 +135,37 @@ namespace QuickCalculator
             double value = 0;
             switch (token.GetCategory())
             {
-                case 'n':
-                    value = Double.Parse(tokens[currentIndex].GetToken());
+                case TokenCategory.Number:
+                    value = double.Parse(tokens[currentIndex].GetToken());
                     break;
-                case '(':
-                    currentIndex++;    // Skip '(' token
+                case TokenCategory.OpenParen:
+                    currentIndex++;    // Skip TokenCategory.OpenParen token
                     value = ParseExpression();
                     break;
-                case 'v':
-                case 'a':
+                case TokenCategory.Variable:
+                case TokenCategory.Parameter:
                     if (localVariables.LocalsContains(token.GetToken()))
                     {   // Check if this variable is defined locally, since local variables should overshadow globals
                         value = localVariables.GetLocal(token.GetToken());
                     }
-                    else if (SymbolTable.variables.Contains(token.GetToken()))
+                    else if (SymbolTable.variables.ContainsKey(token.GetToken()))
                     {
-                        value = ((Variable)SymbolTable.variables[token.GetToken()]).GetValue();
+                        value = SymbolTable.variables[token.GetToken()].GetValue();
                     }
                     else
                     {
                         ExceptionController.AddException("Undefined variable '" + token.GetToken() + "'.", token.GetStart(), token.GetEnd(), 'P');
                     }
                     break;
-                case 'f':
+                case TokenCategory.Function:
                     value = ParseFunction();
                     break;
-                case '-':
+                case TokenCategory.Negation:
                     // Unary negation
                     currentIndex++;     // Skip '-' token
                     value = -1 * ParseExpression();
                     break;
-                case '?':
+                case TokenCategory.Inquiry:
                     InquireFunction();
                     break;
                 default:
@@ -185,13 +185,13 @@ namespace QuickCalculator
         {
             FunctionToken functionToken = (FunctionToken)tokens[currentIndex];
 
-            if (!SymbolTable.functions.Contains(functionToken.GetToken()))
+            if (!SymbolTable.functions.ContainsKey(functionToken.GetToken()))
             {   // functionToken is not in the functions hash table
                 ExceptionController.AddException("Undefined function '" + functionToken.GetToken() + "'.", functionToken.GetStart(), functionToken.GetEnd(), 'P');
                 return 0;
             }
 
-            Function function = (Function)SymbolTable.functions[functionToken.GetToken()];
+            CalculatorFunction function = SymbolTable.functions[functionToken.GetToken()];
 
             List<double> arguments = ParseArguments();
 
@@ -215,7 +215,7 @@ namespace QuickCalculator
         }
 
         /// <summary>
-        /// Parses tokens starting at a function token until it reaches the ']' that terminates the function call.
+        /// Parses tokens starting at a function token until it reaches the TokenCategory.CloseBracket that terminates the function call.
         /// Each time an individual argument is terminated by a ',' token, it is parsed and added to the list of
         /// doubles that is eventually returned.
         /// </summary>
@@ -224,38 +224,38 @@ namespace QuickCalculator
         private List<double> ParseArguments()
         {
             FunctionToken functionToken = (FunctionToken)tokens[currentIndex];
-            currentIndex += 2;  // Move past '['
+            currentIndex += 2;  // Move past TokenCategory.OpenBracket
             List<double> arguments = new List<double>();
             List<Token> argumentTokens = new List<Token>();
             while (currentIndex < tokens.Count)
             {   // End loop if we find a closing bracket of the same level as the function we are parsing
-                if (tokens[currentIndex].GetCategory() == ']' && ((LevelToken)tokens[currentIndex]).GetLevel() == functionToken.GetLevel()) break;
+                if (tokens[currentIndex].GetCategory() == TokenCategory.CloseBracket && ((LevelToken)tokens[currentIndex]).GetLevel() == functionToken.GetLevel()) break;
 
-                if (tokens[currentIndex].GetCategory() == ',' && ((LevelToken)tokens[currentIndex]).GetLevel() == functionToken.GetLevel())
+                if (tokens[currentIndex].GetCategory() == TokenCategory.Comma && ((LevelToken)tokens[currentIndex]).GetLevel() == functionToken.GetLevel())
                 {   // If we find a ',' of the same level as the current function, parse the tokens of the argument and add the resulting double to the functionToken's arguments list
 
                     Parser parseArg = new Parser(argumentTokens, executeFunctions, localVariables);
                     // Parse this argument. Any errors will be added to the same evaluator
 
-                    arguments.Add(parseArg.GetResult());
+                    arguments.Add(parseArg.ParseExpression());
                     argumentTokens = new List<Token>();
                 }
                 else
                 {   // Any token other than ',' comprises the argument, so add it to the argumentsTokens list
                     argumentTokens.Add(tokens[currentIndex]);
                 }
-                currentIndex++; // Move past ']'
+                currentIndex++; // Move past TokenCategory.CloseBracket
             }
 
             if (currentIndex >= tokens.Count)
-            {   // If the loop didn't find a ']', there is an unmatched open bracket
+            {   // If the loop didn't find a TokenCategory.CloseBracket, there is an unmatched open bracket
                 ExceptionController.AddException("Unmatched open bracket.", currentIndex - 1, currentIndex - 1, 'P');
             }
 
             if (argumentTokens.Count > 0)
             {   // Add the last argument if it has at least one token
                 Parser parseArg = new Parser(argumentTokens, executeFunctions, localVariables);
-                arguments.Add(parseArg.GetResult());
+                arguments.Add(parseArg.ParseExpression());
             }
 
             return arguments;
@@ -288,7 +288,7 @@ namespace QuickCalculator
             int functionStartIndex = currentIndex;
 
             List<double> arguments = ParseArguments();
-            // ParseArguments will move currentIndex past the ']' that ends this function
+            // ParseArguments will move currentIndex past the TokenCategory.CloseBracket that ends this function
 
             if(arguments.Count != 0 && arguments.Count != customFunction.GetNumParameters())
             {
@@ -299,20 +299,14 @@ namespace QuickCalculator
             if (executeFunctions)
             {
                 List<Token> inquiryTokens = customFunction.Inquire(arguments);
-                tokens.RemoveRange(functionStartIndex, currentIndex - functionStartIndex + 1);  // Remove the function tokens from the function to the ']'
-                tokens.Insert(functionStartIndex, new Token("(", '(', 0, 0));   // Add '(' token
+                tokens.RemoveRange(functionStartIndex, currentIndex - functionStartIndex + 1);  // Remove the function tokens from the function to the TokenCategory.CloseBracket
+                tokens.Insert(functionStartIndex, new Token("(", TokenCategory.OpenParen, 0, 0));   // Add TokenCategory.OpenParen token
                 tokens.InsertRange(functionStartIndex + 1, inquiryTokens);  // Add the inquiry tokens
-                currentIndex = functionStartIndex + inquiryTokens.Count + 1;  // Move currentIndex past the '(' and inquiryTokens
-                tokens.Insert(currentIndex, new Token(")", ')', 0, 0));   // Add ')' token
+                currentIndex = functionStartIndex + inquiryTokens.Count + 1;  // Move currentIndex past the TokenCategory.OpenParen and inquiryTokens
+                tokens.Insert(currentIndex, new Token(")", TokenCategory.CloseParen, 0, 0));   // Add TokenCategory.CloseParen token
             }
         }
-
-        public double GetResult()
-        {
-            return result;
-        }
-
-        public string ToString()
+        public override string ToString()
         {
             StringBuilder sb = new StringBuilder();
             for (int x = 0; x < tokens.Count; x++)

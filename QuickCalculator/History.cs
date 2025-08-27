@@ -8,81 +8,94 @@ namespace QuickCalculator
 {
     internal class History
     {
-        private static List<string> inputs = new List<string>();
+        private static List<string> entries = new List<string>();
         private static int currentIndex;
 
-        public static void AddInput(string input)
+
+        public static void AddEntry(string entry)
         {
-            if(input.Length > 0)
-            {   // We don't want to add any empty inputs to history
-                if (inputs.Count > 0 && inputs[currentIndex] == null)   // If the user has deleted the current history entry
-                    CompleteDeletion();
-                inputs.Add(input);
-                currentIndex = inputs.Count - 1;
+            if (entry.Length > 0 &&     // We don't want to add any empty entries to history
+                (entries.Count == 0 || !entry.Equals(entries[entries.Count - 1])))  
+                // We don't want to add an entry that is the same as the most recent entry
+            {   
+                entries.Add(entry);
+                if (entries.Count > 0 && entries[currentIndex] == null)   
+                // If the user has deleted the current history entry, we should complete this deletion now
+                    entries.RemoveAt(currentIndex);
+                currentIndex = entries.Count - 1;
             }
         }
 
-        public static string RetrieveInput(int change, string currentInput)
+        /// <summary>
+        /// Attempts to retrieve an adjacent history entry
+        /// </summary>
+        /// <param name="change"></param> Either 1 or -1, determining which direction the user is going in history
+        /// <param name="currentInput"></param> The text that is currently in the input box when they initiated this retrieval attempt
+        /// <returns></returns>
+        public static string RetrieveEntry(int change, string currentInput)
         {
-            if(inputs.Count() == 0 || currentIndex + change < 0 || currentIndex + change >= inputs.Count())
-                // If there is no history yet or the entry would be out of bounds, just return the same input
-                return currentInput;   
+            if(entries.Count == 0 || entries.Count == 1 && entries[0] == null)
+                // If there aren't any entries that aren't marked for deletion, do nothing by returning the same input the user already had
+                return currentInput;
 
+            if (currentInput.Equals("") && entries[currentIndex] != null)
+                // If the user had a blank input, retrieve the most recent entry
+                return entries[currentIndex];
 
-            if (inputs[currentIndex] == null)   // If the user has deleted the current history entry
-                CompleteDeletion(change);
-
-            if(!currentInput.Equals(""))
-            {
-                if (!currentInput.Equals(inputs[currentIndex]))
-                    SaveCurrentInput(change, currentInput);
-                currentIndex += change;
+            if(entries.Count == 1)
+            {   /* Handles an edge case where there is only one entry in the list, as this would
+                 * normally go out of bounds when the adjacent index is accessed. */
+                if (!currentInput.Equals(entries[currentIndex]))
+                {
+                    entries.Add(currentInput);
+                    return entries[currentIndex];
+                }
+                else return currentInput;
             }
-            return inputs[currentIndex];
 
+            if (0 > currentIndex + change || currentIndex + change >= entries.Count)
+                // If the user is attempting to access an out of bounds entry, do nothing
+                return currentInput;
+
+            if (entries[currentIndex] == null)
+            {   // The current entry is marked for deletion
+                if (currentInput.Equals(""))
+                {   // If the user's input is empty, remove the entry
+                    entries.RemoveAt(currentIndex);
+                    if (change == -1) currentIndex--;
+                    return entries[currentIndex];
+                }
+                else entries[currentIndex] = currentInput;
+                // If the user's input is not empty, replace null with their input
+            }
+
+            if (!currentInput.Equals(entries[currentIndex]))
+                // If the user's input is different from the current entry, insert it into the history
+                entries.Insert(++currentIndex, currentInput);
+
+            currentIndex += change;
+            return entries[currentIndex];
         }
 
-
-        private static void SaveCurrentInput(int change, string currentInput)
-        {
-            if (currentIndex == inputs.Count - 1)
-            {   // If the user is at the present point and is going into history, we want to save their input at the end of the list
-                AddInput(currentInput);
-            }
-            else
-            {
-                // If the user is going toward more recent history, we want to insert the temporary after current index
-                if (change == 1) { currentIndex += 1; }
-                // Otherwise they are going toward past history, and we can insert at current index because that will shift everything else forward
-
-                inputs.Insert(currentIndex, currentInput);
-            }
-        }
-
+        /// <summary>
+        /// When the user deletes an entry, we don't remove it from the list right away because we want to maintain the current position in
+        /// the entries list. Instead, we mark it for deletion by setting it to null. We will lazily delete it later once the user moves to a new
+        /// entry in history.
+        /// </summary>
         public static void MarkDeletion()
         {
-            inputs[currentIndex] = null;
-            /* Set this entry to null which will mark it for deletion. This cell of the list won't actually be removed until the user moves
-             * through history or a new entry is added to history, since we still want to maintain the current index. */
+            entries[currentIndex] = null;
         }
 
-        private static void CompleteDeletion(int change = 0)
-        {
-            inputs.RemoveAt(currentIndex);
-            if (change == -1) currentIndex--;
-            /* If the user went backward in memory we'll need to move back. If they went forward (change == 1) the entry removal will have shifted the list
-             * so currentIndex will already be on the correct entry. */
-
-        }
         public static void Clear()
         {
-            inputs = new List<string>();
+            entries = new List<string>();
             currentIndex = 0;
         }
 
         public static string HistoryString()
         {
-            return currentIndex + "..." + (inputs.Count - currentIndex - 1);
+            return currentIndex + "..." + (entries.Count - currentIndex - 1);
         }
     }
 }

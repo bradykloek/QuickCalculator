@@ -5,15 +5,17 @@ using System.Linq;
 using System.Reflection.Metadata.Ecma335;
 using System.Text;
 using System.Threading.Tasks;
+using QuickCalculator.Evaluation;
+using QuickCalculator.Tokens;
 using static System.Runtime.InteropServices.JavaScript.JSType;
 
-namespace QuickCalculator
+namespace QuickCalculator.Symbols
 {
-    internal class CustomFunction : Function
+    internal class CustomFunction : CalculatorFunction
     {
         private string name;
         private List<Token> parameters;
-        private List<Token> ? tokens;
+        private List<Token> tokens;
         private SymbolTable localVariables = new SymbolTable();
         public CustomFunction(string name, List<Token> parameters)
         {
@@ -63,7 +65,7 @@ namespace QuickCalculator
                 {
                     if (parameters[i].GetToken().Equals(tokens[j].GetToken()))
                     {   // If this parameter matches this token, update the token's category to be an argument 
-                        tokens[j].SetCategory('a');
+                        tokens[j].SetCategory(TokenCategory.Parameter);
                     }
                 }
             }
@@ -90,7 +92,7 @@ namespace QuickCalculator
             if (localVariables != null)
             {
                 Parser functionParser = new Parser(tokens, true, localVariables);
-                return functionParser.GetResult();
+                return functionParser.ParseExpression();
             }
             return 1;
         }
@@ -112,9 +114,9 @@ namespace QuickCalculator
             for(int i = 0; i < tokens.Count; i++)
             {
                 Token token = tokens[i];
-                if(token.GetCategory() == 'a')
+                if(token.GetCategory() == TokenCategory.Parameter)
                 {   // If we are on an argument, add a new token that represents its numerical value
-                    inquiryTokens.Add(new Token(localVariables.GetLocal(token.GetToken()).ToString(),'n',0,0));
+                    inquiryTokens.Add(new Token(localVariables.GetLocal(token.GetToken()).ToString(),TokenCategory.Number,0,0));
                 }
                 else
                 {   // Otherwise add the raw token
@@ -154,14 +156,14 @@ namespace QuickCalculator
         public override string ToString()
         {
             StringBuilder sb = new StringBuilder(name);
-            sb.Append('[');
+            sb.Append(TokenCategory.OpenBracket);
 
             for (int i = 0; i < parameters.Count; i++)
             {
                 sb.Append(parameters[i]);
                 if(i < parameters.Count - 1) sb.Append(',');
             }
-            sb.Append(']');
+            sb.Append(TokenCategory.CloseBracket);
 
             return sb.ToString();
         }

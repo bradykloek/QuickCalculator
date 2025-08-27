@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace QuickCalculator
+namespace QuickCalculator.Tokens
 {
     /// <summary>
     /// Token that represents a Function. Has an additional field, arguments, that is a List that holds 
@@ -15,7 +15,7 @@ namespace QuickCalculator
     {
         private int level;
         private List<double> arguments;
-        public FunctionToken(string token, char category, int start, int end, int level) : base(token, category, start, end, level)
+        public FunctionToken(string token, TokenCategory category, int start, int end, int level) : base(token, category, start, end, level)
         {
             this.level = level;
             arguments = new List<double>();

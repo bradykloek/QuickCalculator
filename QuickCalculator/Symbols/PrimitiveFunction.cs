@@ -5,9 +5,9 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace QuickCalculator
+namespace QuickCalculator.Symbols
 {
-    internal class PrimitiveFunction : Function
+    internal class PrimitiveFunction : CalculatorFunction
     {
         private Func<List<double>, double> function;
         private int numParameters;

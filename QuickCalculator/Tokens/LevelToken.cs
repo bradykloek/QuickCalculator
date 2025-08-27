@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace QuickCalculator
+namespace QuickCalculator.Tokens
 {
     /// <summary>
     /// Represents a token that holds additional information about what level it was found on. This is used for any elements
@@ -13,7 +13,7 @@ namespace QuickCalculator
     internal class LevelToken : Token
     {
         private int level;
-        public LevelToken(string token, char category, int start, int end, int level) : base(token, category, start, end)
+        public LevelToken(string token, TokenCategory category, int start, int end, int level) : base(token, category, start, end)
         {
             this.level = level;
         }

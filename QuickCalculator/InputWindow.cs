@@ -3,6 +3,8 @@ using System.Diagnostics;
 using System.Drawing;
 using System.Text;
 using System.Windows.Forms;
+using QuickCalculator.Evaluation;
+using QuickCalculator.Tokens;
 
 namespace QuickCalculator
 {
@@ -18,7 +20,11 @@ namespace QuickCalculator
         Color FUNC1 = Color.FromArgb(255, 150, 255);        // Pink
         Color FUNC2 = Color.FromArgb(150, 255, 200);        // Mint
         Color FUNC3 = Color.FromArgb(255, 190, 190);        // Faded Red
-        Color ARGUMENT = Color.FromArgb(255, 255, 160);     // Faded Yellow
+        Color PARAMETER = Color.FromArgb(255, 255, 160);    // Faded Yellow
+
+        Color DEFAULT = Color.FromArgb(64, 64, 64);         // Dark Grey
+        Color SUCCESS = Color.FromArgb(0, 80, 0);           // Green
+        Color DELETE = Color.FromArgb(80, 0, 0);            // Red
 
         double roundPrecision = 0.00000001;
 
@@ -30,9 +36,7 @@ namespace QuickCalculator
 
         private void inputTextBox_KeyDown(object sender, KeyEventArgs e)
         {
-            // User's input should always be the default styling
-            inputTextBox.SelectionColor = Color.White;
-            inputTextBox.SelectionFont = new Font(inputTextBox.SelectionFont, FontStyle.Regular);
+
 
             switch (e.KeyCode)
             {
@@ -42,23 +46,28 @@ namespace QuickCalculator
 
                     if (inputTextBox.Text.Length == 0) break;
 
-                    History.AddInput(inputTextBox.Text);
-                    Evaluator evaluator = new Evaluator(inputTextBox.Text, true, roundPrecision);
+                    History.AddEntry(inputTextBox.Text);
+                    Evaluator evaluator = new Evaluator(true, roundPrecision);
+                    evaluator.Evaluate(inputTextBox.Text);
 
                     if (ExceptionController.GetCount() != 0)
                         System.Windows.Forms.MessageBox.Show(ExceptionController.ErrorMessage());
                     else
+                    {
                         UpdateTextBox(evaluator.Result());
+                        History.AddEntry(evaluator.Result().ToString());
+                        inputTextBox.BackColor = SUCCESS;
+                    }
                     break;
                 case Keys.Up:
                     e.SuppressKeyPress = true;
 
-                    UpdateTextBox(History.RetrieveInput(-1, inputTextBox.Text));
+                    UpdateTextBox(History.RetrieveEntry(-1, inputTextBox.Text));
                     break;
                 case Keys.Down:
                     e.SuppressKeyPress = true;
 
-                    UpdateTextBox(History.RetrieveInput(1, inputTextBox.Text));
+                    UpdateTextBox(History.RetrieveEntry(1, inputTextBox.Text));
                     break;
 
                 case Keys.Back:
@@ -66,7 +75,7 @@ namespace QuickCalculator
                     {
                         UpdateTextBox("");
                         History.MarkDeletion();
-                        System.Windows.Forms.MessageBox.Show("Deleted from History");
+                        inputTextBox.BackColor = DELETE;
 
                     }
                     break;
@@ -76,8 +85,9 @@ namespace QuickCalculator
 
         private void inputTextBox_TextChanged(object sender, EventArgs e)
         {
-            Evaluator evaluator = new Evaluator(inputTextBox.Text, false, 0);
-
+            Evaluator evaluator = new Evaluator(false, 0);
+            evaluator.Evaluate(inputTextBox.Text);
+            inputTextBox.BackColor = DEFAULT;
             colorTokens(evaluator);
             colorErrors(evaluator);
             historyInfo.Text = History.HistoryString();
@@ -97,7 +107,7 @@ namespace QuickCalculator
         /// <param name="length"></param> Number of characters that should be colored
         /// <param name="color"></param> Color that the text should be changed to
         /// <param name="style"></param> Font Style that should be applied
-        private void colorText(int start, int length, Color color, FontStyle style)
+        private void colorText(int start, int length, Color color, FontStyle style = FontStyle.Regular)
         {   // Save user's selection
             int selectionStart = inputTextBox.SelectionStart;
             int selectionLength = inputTextBox.SelectionLength;
@@ -132,7 +142,7 @@ namespace QuickCalculator
         private void colorTokens(Evaluator evaluator)
         {
             // The only text that isn't a part of a token is for assignments, since the assignment operater and assignee variable are removed
-            colorText(0, inputTextBox.Text.Length, ASSIGNMENT, FontStyle.Regular);
+            colorText(0, inputTextBox.Text.Length, ASSIGNMENT);
             List<Token> tokens = evaluator.GetTokens();
             Color[] parenColors = { PAREN1, PAREN2, PAREN3 };
             Color[] funcColors = { FUNC1, FUNC2, FUNC3 };
@@ -144,30 +154,30 @@ namespace QuickCalculator
                 int tokenLength = tokens[i].GetEnd() - tokenStart;
                 switch (tokens[i].GetCategory())
                 {
-                    case '(':
-                    case ')':
+                    case TokenCategory.OpenParen:
+                    case TokenCategory.CloseParen:
                         level = ((LevelToken)tokens[i]).GetLevel();
-                        colorText(tokenStart, 1, parenColors[level % 3], FontStyle.Regular);
+                        colorText(tokenStart, 1, parenColors[level % 3]);
                         break;
-                    case 'n':
-                        colorText(tokenStart, tokenLength, NUMBER, FontStyle.Regular);
+                    case TokenCategory.Number:
+                        colorText(tokenStart, tokenLength, NUMBER);
                         break;
-                    case 'o':
-                        colorText(tokenStart, tokenLength, OPERATOR, FontStyle.Regular);
+                    case TokenCategory.Operator:
+                        colorText(tokenStart, tokenLength, OPERATOR);
                         break;
-                    case 'v':
-                        colorText(tokenStart, tokenLength, VARIABLE, FontStyle.Regular);
+                    case TokenCategory.Variable:
+                        colorText(tokenStart, tokenLength, VARIABLE);
                         break;
-                    case 'f':
-                    case '[':
-                    case ']':
-                    case ',':
+                    case TokenCategory.Function:
+                    case TokenCategory.OpenBracket:
+                    case TokenCategory.CloseBracket:
+                    case TokenCategory.Comma:
                         // All of these tokens are only found in function calls
                         level = ((LevelToken)tokens[i]).GetLevel();
-                        colorText(tokenStart, tokenLength, funcColors[level % 3], FontStyle.Regular);
+                        colorText(tokenStart, tokenLength, funcColors[level % 3]);
                         break;
-                    case 'a':
-                        colorText(tokenStart, tokenLength, ARGUMENT, FontStyle.Regular);
+                    case TokenCategory.Parameter:
+                        colorText(tokenStart, tokenLength, PARAMETER);
                         break;
                 }
             }

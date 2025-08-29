@@ -16,7 +16,7 @@ namespace QuickCalculator.Evaluation
         private List<Token> tokens;                 // Stores the tokens that get created
 
 
-        private static char[] operators = { '+', '-', '*', '/', '^', '%', '!', '=' };
+        private static char[] operators = { '+', '-', '*', '/', '^', '%', '!'};
 
         // Flags and variables that store temporary information for the Tokenizer
         int parenLevel = -1;             // Current level of parenthesization
@@ -80,7 +80,7 @@ namespace QuickCalculator.Evaluation
         /// Otherwise, add thew newToken that is passed in.
         /// </summary>
         /// <param name="newToken"></param>
-        private void AddToken(Token newToken)
+        private void AddToken()
         {
             ImplicitMultiplication();   // Before adding the token, check if there is an implicit multiplication
 
@@ -91,8 +91,12 @@ namespace QuickCalculator.Evaluation
             }
             else
             {
-                tokens.Add(newToken);
+                tokens.Add(new Token(token, category, tokenStart, currentIndex + 1));
             }
+
+            // Reset the category and token to indicate that we are starting a new token
+            category = TokenCategory.Uncategorized; 
+            token = "";
         }
 
         /// <summary>
@@ -102,7 +106,13 @@ namespace QuickCalculator.Evaluation
         {
             while(NextChar())
             {
-                if (current.Equals(' ') && category != TokenCategory.Variable) { // Whitespace is ignored in all cases except for in variables, where it ends the variable token
+                if (current.Equals(' ')) {
+                    /*  Whitespace will be skipped and end any token except for Numbers. In Numbers, the user may wish to use whitespace
+                     *  to separate digits similar to commas. */
+                    if(category != TokenCategory.Uncategorized && category != TokenCategory.Number)
+                    {
+                        AddToken();
+                    }                        
                     continue;
                 }
 
@@ -122,23 +132,12 @@ namespace QuickCalculator.Evaluation
                         if (TokenizeCommand()) break;
                         else continue;
                 }
-
-
-                AddToken(new Token(token, category, tokenStart, currentIndex + 1));
-
-                category = TokenCategory.Uncategorized; // Change the category to indicate that we are starting a new token
-                token = "";
-
+                AddToken();
             }
 
-            if (category == TokenCategory.Variable || category == TokenCategory.Number || category == TokenCategory.Function) // If the last token is a symbol, number, or function, it hasn't been added yet
-            {
-                AddToken(new Token(token, category, tokenStart, input.Length));
-            }
-
-            if (tokens[0].GetCategory() == TokenCategory.Command)
-            {
-                RunCommand();
+            if (category != TokenCategory.Uncategorized)
+            {   // If a category is set, we reached the end of the input while still reading a single token. This final token still needs to be added.
+                AddToken();
             }
         }
 
@@ -176,6 +175,10 @@ namespace QuickCalculator.Evaluation
             {
                 return TokenizeOperator();
             }
+            else if (current == '=')
+            {
+                category = TokenCategory.Assignment;
+            }
             else if (current == '(' || current == ')')
             {
                 TokenizeParenthesis();
@@ -195,6 +198,7 @@ namespace QuickCalculator.Evaluation
             else if (current == '>')
             {
                 category = TokenCategory.Command;
+                token = "";     // We don't want to include the '>' in the token
                 return false;
             }
             else
@@ -315,12 +319,12 @@ namespace QuickCalculator.Evaluation
             if (current == '(')
             {
                 category = TokenCategory.OpenParen;
-                addToken = new LevelToken(token, category, tokenStart, currentIndex, ++parenLevel);
+                addToken = new LevelToken(token, category, tokenStart, currentIndex + 1, ++parenLevel);
             }
             else
             {
                 category = TokenCategory.CloseParen;
-                addToken = new LevelToken(token, category, tokenStart, currentIndex, parenLevel--);
+                addToken = new LevelToken(token, category, tokenStart, currentIndex + 1, parenLevel--);
             }
         }
 
@@ -388,20 +392,6 @@ namespace QuickCalculator.Evaluation
                         }
                         break;
                 }
-            }
-        }
-
-        private void RunCommand()
-        {
-            Token commandToken = tokens[0];
-            switch (commandToken.GetToken())
-            {
-                case "clear":
-                    History.Clear();
-                    break;
-                default:
-                    ExceptionController.AddException("Command '" + tokens[0].GetToken() + "' does not exist", commandToken.GetStart(), commandToken.GetEnd(), 'T');
-                    break;
             }
         }
     }

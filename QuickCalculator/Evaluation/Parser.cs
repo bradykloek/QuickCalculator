@@ -25,6 +25,7 @@ namespace QuickCalculator.Evaluation
         private SymbolTable localVariables;
         private bool executeFunctions;
 
+
         /// <summary>
         /// Initializes a Parser using a completed token list. This will parse and evaluate the tokens,
         /// and store the result in this.result.
@@ -306,6 +307,7 @@ namespace QuickCalculator.Evaluation
                 tokens.Insert(currentIndex, new Token(")", TokenCategory.CloseParen, 0, 0));   // Add TokenCategory.CloseParen token
             }
         }
+
         public override string ToString()
         {
             StringBuilder sb = new StringBuilder();

@@ -13,7 +13,7 @@ namespace QuickCalculator.Evaluation
         private List<Token> tokens;
         private string assignVariable = "";
         private CustomFunction defineFunction = null;
-        bool includesInquiry = false;
+        bool completedInquiry = false;
 
         public Validator(List<Token> tokens)
         {
@@ -30,9 +30,9 @@ namespace QuickCalculator.Evaluation
             return defineFunction;
         }
 
-        public bool GetIncludesInquiry()
+        public bool GetCompletedInquiry()
         {
-            return includesInquiry;
+            return completedInquiry;
         }
 
         public void Validate()
@@ -43,17 +43,17 @@ namespace QuickCalculator.Evaluation
             for (int i = 0; i < tokens.Count; i++)
             {
                 Token token = tokens[i];
-                switch (token.GetToken())
+                switch (token.GetCategory())
                 {
-                    case "(":
+                    case TokenCategory.OpenParen:
                         parenStack.Push(token);
                         break;
-                    case ")":
+                    case TokenCategory.CloseParen:
                         if (parenStack.Count > 0)
                             parenStack.Pop();
                         else ExceptionController.AddException("Unmatched closing parenthesis.", token.GetStart(), token.GetEnd(), 'V');
                         break;
-                    case "=":
+                    case TokenCategory.Assignment:
                         if (assignmentIndex != -1)
                             ExceptionController.AddException("Expression contains multiple assignment operators '='.", token.GetStart(), token.GetEnd(), 'V');
                         else
@@ -62,14 +62,15 @@ namespace QuickCalculator.Evaluation
                             PrepareAssignment(assignmentIndex);
                         }
                         break;
-                    case "?":
-                        includesInquiry = true;
+                    case TokenCategory.Inquiry:
                         if (i >= 1 && tokens[i - 1].GetCategory() == TokenCategory.Variable)
                         {
+                            completedInquiry = true;
                             i = InquireVariable(i);
                         }
                         else if (i >= 3 && tokens[i - 1].GetCategory() == TokenCategory.CloseBracket)
                         {
+                            // completedInquiry is not set to true because function inquiries need to be completed in the parser
                             InquireFunction(i);
                         }
                         else
@@ -78,13 +79,19 @@ namespace QuickCalculator.Evaluation
                                                             " or Custom Function with zero arguments.", i, i + 1, 'V');
                         }
                         break;
+                    case TokenCategory.Command:
+                        if (i != 0)
+                            ExceptionController.AddException("Command can only be at the start of the input.", token.GetStart(), token.GetEnd(), 'V');
+                        else
+                            ValidateCommand(token, i);
+                        break;
                 }
+            }
 
-                while (parenStack.Count > 0)
-                {
-                    Token openParen = parenStack.Pop();
-                    ExceptionController.AddException("Unmatched open parenthesis.", openParen.GetStart(), openParen.GetEnd(), 'P');
-                }
+            while (parenStack.Count > 0)
+            {
+                Token openParen = parenStack.Pop();
+                ExceptionController.AddException("Unmatched open parenthesis.", openParen.GetStart(), openParen.GetEnd(), 'V');
             }
         }
 
@@ -228,13 +235,14 @@ namespace QuickCalculator.Evaluation
 
             Variable variable = SymbolTable.variables[tokens[tokens.Count - 1].GetToken()];
             // Insert parens in reverse order because they will be shifted by the later insertions
-            tokens.Insert(inquiryIndex, new LevelToken(")", TokenCategory.CloseParen, 0, 0, 0));      
-            tokens.InsertRange(inquiryIndex,variable.GetTokens());      // Add variable's tokens
+            tokens.Insert(inquiryIndex, new LevelToken(")", TokenCategory.CloseParen, 0, 0, 0));
+            tokens.InsertRange(inquiryIndex, variable.GetTokens());      // Add variable's tokens
             tokens.Add(new LevelToken("(", TokenCategory.OpenParen, 0, 0, 0));
             // The levels of the paren tokens don't matter here because they will not be seen by the user
 
             int index = inquiryIndex + variable.GetTokens().Count() + 1;
             tokens.RemoveAt(index);
+            completedInquiry = true;
             return index - 1;
         }
 
@@ -251,6 +259,40 @@ namespace QuickCalculator.Evaluation
                 }
             }
             tokens.Insert(i, new Token("?", TokenCategory.Inquiry, 0, 0));
+        }
+
+
+        private void ValidateCommand(Token commandToken, int startIndex)
+        {
+            if (startIndex != 0)
+            {
+                ExceptionController.AddException("Command must be at the beginning of the input.", commandToken.GetStart(), commandToken.GetEnd(), 'V');
+                return;
+            }
+
+            if (!SymbolTable.commands.ContainsKey(commandToken.GetToken()))
+            {
+                ExceptionController.AddException("Unknown command '" + commandToken + "'.", commandToken.GetStart(), commandToken.GetEnd(), 'V');
+                return;
+            }
+
+            Command command = SymbolTable.commands[commandToken.GetToken()];
+
+            if (tokens.Count - 1 != command.NumParameters())
+            {
+                ExceptionController.AddException("Command '" + commandToken + "' requires " + command.NumParameters() + " arguments, received "
+                                                    + (tokens.Count - 1) + ".", commandToken.GetStart(), commandToken.GetEnd(), 'V');
+                return;
+            }
+
+            for (int i = 0; i < command.NumParameters(); i++)
+            {
+                if (tokens[i + 1].GetCategory() != command.GetParameter(i))
+                {
+                    ExceptionController.AddException("Argument '" + (i + 1) + " for command " + commandToken + " should a " + command.GetParameter(i) +
+                                                     " token, recieved " + tokens[i + 1].GetCategory() + ".", tokens[i + 1].GetStart(), tokens[i + 1].GetEnd(), 'V');
+                }
+            }
         }
     }
 }

@@ -9,7 +9,7 @@ namespace QuickCalculator
     internal class History
     {
         private static List<string> entries = new List<string>();
-        private static int currentIndex;
+        private static int index;
 
 
         public static void AddEntry(string entry)
@@ -19,10 +19,10 @@ namespace QuickCalculator
                 // We don't want to add an entry that is the same as the most recent entry
             {   
                 entries.Add(entry);
-                if (entries.Count > 0 && entries[currentIndex] == null)   
+                if (entries.Count > 0 && entries[index] == null)   
                 // If the user has deleted the current history entry, we should complete this deletion now
-                    entries.RemoveAt(currentIndex);
-                currentIndex = entries.Count - 1;
+                    entries.RemoveAt(index);
+                index = entries.Count - 1;
             }
         }
 
@@ -38,43 +38,43 @@ namespace QuickCalculator
                 // If there aren't any entries that aren't marked for deletion, do nothing by returning the same input the user already had
                 return currentInput;
 
-            if (currentInput.Equals("") && entries[currentIndex] != null)
+            if (currentInput.Equals("") && entries[index] != null)
                 // If the user had a blank input, retrieve the most recent entry
-                return entries[currentIndex];
+                return entries[index];
 
             if(entries.Count == 1)
             {   /* Handles an edge case where there is only one entry in the list, as this would
                  * normally go out of bounds when the adjacent index is accessed. */
-                if (!currentInput.Equals(entries[currentIndex]))
+                if (!currentInput.Equals(entries[index]))
                 {
                     entries.Add(currentInput);
-                    return entries[currentIndex];
+                    return entries[index];
                 }
                 else return currentInput;
             }
 
-            if (0 > currentIndex + change || currentIndex + change >= entries.Count)
+            if (0 > index + change || index + change >= entries.Count)
                 // If the user is attempting to access an out of bounds entry, do nothing
                 return currentInput;
 
-            if (entries[currentIndex] == null)
+            if (entries[index] == null)
             {   // The current entry is marked for deletion
                 if (currentInput.Equals(""))
                 {   // If the user's input is empty, remove the entry
-                    entries.RemoveAt(currentIndex);
-                    if (change == -1) currentIndex--;
-                    return entries[currentIndex];
+                    entries.RemoveAt(index);
+                    if (change == -1) index--;
+                    return entries[index];
                 }
-                else entries[currentIndex] = currentInput;
+                else entries[index] = currentInput;
                 // If the user's input is not empty, replace null with their input
             }
 
-            if (!currentInput.Equals(entries[currentIndex]))
+            if (!currentInput.Equals(entries[index]))
                 // If the user's input is different from the current entry, insert it into the history
-                entries.Insert(++currentIndex, currentInput);
+                entries.Insert(++index, currentInput);
 
-            currentIndex += change;
-            return entries[currentIndex];
+            index += change;
+            return entries[index];
         }
 
         /// <summary>
@@ -84,18 +84,18 @@ namespace QuickCalculator
         /// </summary>
         public static void MarkDeletion()
         {
-            entries[currentIndex] = null;
+            entries[index] = null;
         }
 
         public static void Clear()
         {
             entries = new List<string>();
-            currentIndex = 0;
+            index = 0;
         }
 
         public static string HistoryString()
         {
-            return currentIndex + "..." + (entries.Count - currentIndex - 1);
+            return index + "..." + (entries.Count - index - 1);
         }
     }
 }

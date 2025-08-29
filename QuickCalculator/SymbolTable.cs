@@ -26,6 +26,21 @@ namespace QuickCalculator
             {"inf", new Variable(Double.PositiveInfinity)}
         };
 
+        public static Dictionary<string, Command> commands = new Dictionary<string, Command>
+        {
+            {"clear", new Command(x => {
+                                        History.Clear();
+                                        return "History Cleared";
+                                    }
+            ) },
+
+            {"save", new Command(x => {
+                                        return "This doesn't work now, but it would save " + x[0];
+                                    },
+                                    new TokenCategory[] { TokenCategory.Variable }
+            ) },
+        };
+
         public static Dictionary<string, CalculatorFunction> functions = new Dictionary<string,CalculatorFunction>
         {
             {"sqrt", new PrimitiveFunction(1,

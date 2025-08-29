@@ -28,6 +28,8 @@ namespace QuickCalculator
 
         double roundPrecision = 0.00000001;
 
+        bool temporaryResult = false;
+
 
         public InputWindow()
         {
@@ -36,7 +38,11 @@ namespace QuickCalculator
 
         private void inputTextBox_KeyDown(object sender, KeyEventArgs e)
         {
-
+            if (temporaryResult)
+            {
+                inputTextBox.Text = "";
+                temporaryResult = false;
+            }
 
             switch (e.KeyCode)
             {
@@ -54,6 +60,13 @@ namespace QuickCalculator
                         System.Windows.Forms.MessageBox.Show(ExceptionController.ErrorMessage());
                     else
                     {
+                        temporaryResult = evaluator.TemporaryResult();
+                        if (temporaryResult)
+                        {
+                            inputTextBox.Text = evaluator.Result();
+                            return;
+                        }
+
                         UpdateTextBox(evaluator.Result());
                         History.AddEntry(evaluator.Result().ToString());
                         inputTextBox.BackColor = SUCCESS;
@@ -85,6 +98,7 @@ namespace QuickCalculator
 
         private void inputTextBox_TextChanged(object sender, EventArgs e)
         {
+            if (temporaryResult) return;
             Evaluator evaluator = new Evaluator(false, 0);
             evaluator.Evaluate(inputTextBox.Text);
             inputTextBox.BackColor = DEFAULT;

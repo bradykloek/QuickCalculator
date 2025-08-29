@@ -18,6 +18,7 @@ namespace QuickCalculator
         CloseParen,
         OpenBracket,
         CloseBracket,
+        Assignment,
         Comma,
         Negation,
         Inquiry,

@@ -17,6 +17,7 @@ namespace QuickCalculator.Evaluation
         private Tokenizer tokenizer;
         private double roundPrecision;
         private string resultString;
+        private bool temporaryResult;
 
 
         public Evaluator(bool executeInput, double roundPrecision)
@@ -33,9 +34,10 @@ namespace QuickCalculator.Evaluation
             if (input.Length == 0) return;
 
             tokenizer.Tokenize();
-
             Validator validator = new Validator(tokenizer.GetTokens());
             validator.Validate();
+
+            if (ExceptionController.GetCount() != 0) return;
 
 
             if (validator.GetDefineFunction() != null)
@@ -44,24 +46,26 @@ namespace QuickCalculator.Evaluation
                 resultString = input;
             }
 
-            else if (ExceptionController.GetCount() == 0)
+            if (tokenizer.GetTokens().Count > 0 && tokenizer.GetTokens()[0].GetCategory() == TokenCategory.Command)
             {
-                Parser parser = new Parser(tokenizer.GetTokens(), executeInput);
-                SetResult(parser.ParseExpression());
+                if(executeInput)
+                    ExecuteCommand();
+                return;
+            }
 
+            if (executeInput && validator.GetCompletedInquiry())
+            {
+                resultString = TokenString();
+                return;
+            }
 
+            Parser parser = new Parser(tokenizer.GetTokens(), executeInput);
+            SetResult(parser.ParseExpression());
 
-                if (executeInput && validator.GetIncludesInquiry())
-                {
-                    resultString = TokenString();
-                }
-
-                if (executeInput && validator.GetAssignVariable() != "")
-                {
-                    if(!validator.GetIncludesInquiry())
-                        PerformAssignment(validator.GetAssignVariable());
-                    resultString = validator.GetAssignVariable() + " = " + result;
-                }
+            if (executeInput && validator.GetAssignVariable() != "")
+            {
+                PerformAssignment(validator.GetAssignVariable());
+                resultString = validator.GetAssignVariable() + " = " + result;
             }
         }
 
@@ -87,6 +91,15 @@ namespace QuickCalculator.Evaluation
             }
         }
 
+        private void ExecuteCommand()
+        {
+            List<Token> tokens = tokenizer.GetTokens();
+            Command command = SymbolTable.commands[tokens[0].GetToken()];
+            resultString = command.Execute(tokens.GetRange(1, tokens.Count - 1));
+            temporaryResult = true;
+        }
+
+
         private void SetResult(double value)
         {
             result = value;
@@ -95,6 +108,11 @@ namespace QuickCalculator.Evaluation
                 result = Math.Round(value);
             }
             resultString = result.ToString();
+        }
+
+        public bool TemporaryResult()
+        {
+            return temporaryResult;
         }
 
         public string Result()

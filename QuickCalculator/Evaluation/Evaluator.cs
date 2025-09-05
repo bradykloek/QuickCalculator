@@ -40,16 +40,19 @@ namespace QuickCalculator.Evaluation
             if (ExceptionController.GetCount() != 0) return;
 
 
-            if (validator.GetDefineFunction() != null)
-            {
-                DefineCustomFunction(validator.GetDefineFunction());
-                resultString = input;
-            }
+
 
             if (tokenizer.GetTokens().Count > 0 && tokenizer.GetTokens()[0].GetCategory() == TokenCategory.Command)
             {
                 if(executeInput)
                     ExecuteCommand();
+                return;
+            }
+
+            if (validator.GetDefineFunction() != null)
+            {
+                DefineCustomFunction(validator.GetDefineFunction());
+                resultString = input;
                 return;
             }
 

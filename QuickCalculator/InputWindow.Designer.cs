@@ -30,7 +30,6 @@
         {
             inputTextBox = new RichTextBox();
             label1 = new Label();
-            historyInfo = new RichTextBox();
             SuspendLayout();
             // 
             // inputTextBox
@@ -46,36 +45,30 @@
             inputTextBox.Text = "";
             inputTextBox.TextChanged += inputTextBox_TextChanged;
             inputTextBox.KeyDown += inputTextBox_KeyDown;
-
             // 
-            // historyInfo
+            // label1
             // 
-            historyInfo.Location = new Point(1116, 26);
-            historyInfo.Name = "historyInfo";
-            historyInfo.ReadOnly = true;
-            historyInfo.Size = new Size(93, 55);
-            historyInfo.TabIndex = 3;
-            historyInfo.Text = "";
+            label1.Location = new Point(0, 0);
+            label1.Name = "label1";
+            label1.Size = new Size(100, 23);
+            label1.TabIndex = 4;
             // 
             // InputWindow
             // 
             AutoScaleDimensions = new SizeF(13F, 32F);
             AutoScaleMode = AutoScaleMode.Font;
             BackColor = Color.DarkGray;
-            ClientSize = new Size(1265, 110);
-            Controls.Add(historyInfo);
+            ClientSize = new Size(1105, 106);
             Controls.Add(label1);
             Controls.Add(inputTextBox);
             Margin = new Padding(6);
             Name = "InputWindow";
             ResumeLayout(false);
-            PerformLayout();
         }
 
         #endregion
 
         private RichTextBox inputTextBox;
         private Label label1;
-        private RichTextBox historyInfo;
     }
 }

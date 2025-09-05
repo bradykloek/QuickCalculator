@@ -104,8 +104,6 @@ namespace QuickCalculator
             inputTextBox.BackColor = DEFAULT;
             colorTokens(evaluator);
             colorErrors(evaluator);
-            historyInfo.Text = History.HistoryString();
-
         }
 
         private void UpdateTextBox(string content)

@@ -18,6 +18,11 @@ namespace QuickCalculator
     {
         private static Random random = new Random();
 
+        public static void SetAns(double ans)
+        {
+            variables["ans"] = new Variable(ans);
+        }
+
         public static Dictionary<string, Variable> variables = new Dictionary<string, Variable>
         {
             {"ans", new Variable(0) },

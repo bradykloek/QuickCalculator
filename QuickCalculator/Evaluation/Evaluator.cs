@@ -64,12 +64,16 @@ namespace QuickCalculator.Evaluation
 
             Parser parser = new Parser(tokenizer.GetTokens(), executeInput);
             SetResult(parser.ParseExpression());
-
-            if (executeInput && validator.GetAssignVariable() != "")
+            if (executeInput)
             {
-                PerformAssignment(validator.GetAssignVariable());
-                resultString = validator.GetAssignVariable() + " = " + result;
+                SymbolTable.SetAns(result);
+                if (validator.GetAssignVariable() != "")
+                {
+                    PerformAssignment(validator.GetAssignVariable());
+                    resultString = validator.GetAssignVariable() + " = " + result;
+                }
             }
+  
         }
 
         private void PerformAssignment(string variableName)

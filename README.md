@@ -11,7 +11,7 @@ This project is still in development, so it is not yet usable as a standalone de
 	- `*` Multiplication
 	- `/` Division
 	- `//` Integer Division
-	- `%` Reduction Modulo
+	- `%` Remainder
 	- `!` Factorial
 	- `=` Assignment
 	- Implicit Multiplication

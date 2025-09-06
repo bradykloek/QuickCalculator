@@ -87,10 +87,6 @@ namespace QuickCalculator.Evaluation
                         break;
                     case "%":
                         left = left % right;
-                        if(left < 0)
-                        {
-                            left += right;  // C#'s % is actually remainder instead of modulo. This changes it to modulo behavior
-                        }
                         break;
                     case "//":
                         left = Math.Floor(left / right);

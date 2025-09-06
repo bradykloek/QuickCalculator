@@ -116,6 +116,11 @@ namespace QuickCalculator
                                         x => Math.Truncate(x[0])
             )},
 
+            {"mod", new PrimitiveFunction(2,
+                                        x => ((x[0] % x[1]) + x[1]) % x[1]  
+                                        // C# % is remainder (which can be negative), so this shifts it to always be positive so it is modulo
+            )},
+
             {"factorial", new PrimitiveFunction(1,
                                         x => {
                                             if(x[0] < 0) return double.NaN;

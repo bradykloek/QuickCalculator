@@ -8,36 +8,22 @@ namespace QuickCalculator
 {
     internal class EvaluationException : Exception
     {
-        private int startIndex;
-        private int endIndex;
-        private char source;
-        public EvaluationException() { }
+        public int StartIndex { get; private set; }
+        public int EndIndex { get; private set; }
+		public char Source { get; private set; }
+		public EvaluationException() { }
         public EvaluationException(string message) : base(message) { }
 
-        public EvaluationException(string message, int start, int end, char source) : base(message)
+        public EvaluationException(string message, int start, int end, char Source) : base(message)
         {
-            startIndex = start;
-            endIndex = end;
-            this.source = source;
+            StartIndex = start;
+            EndIndex = end;
+            this.Source = Source;
         }
 
-        public int GetStart()
-        {
-            return startIndex;
-        }
-
-        public int GetEnd()
-        {
-            return endIndex;
-        }
-
-        public char GetSource()
-        {
-            return source;
-        }
         public override string ToString()
         {
-            return "[" + startIndex + "] " + base.Message + " (" + source + ")";
+            return "[" + StartIndex + "] " + base.Message + " (" + Source + ")";
         }
 
     }

@@ -46,7 +46,7 @@ namespace QuickCalculator
             ) },
         };
 
-        public static Dictionary<string, CalculatorFunction> functions = new Dictionary<string,CalculatorFunction>
+        public static Dictionary<string, CalcFunction> functions = new Dictionary<string,CalcFunction>
         {
             {"sqrt", new PrimitiveFunction(1,
                                         x => Math.Pow(x[0], 0.5)

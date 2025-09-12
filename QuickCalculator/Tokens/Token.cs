@@ -7,51 +7,28 @@ using System.Threading.Tasks;
 namespace QuickCalculator.Tokens
 {
     /// <summary>
-    /// Represents an individual token of information. Tokenizer parses an input string to convert it into a list of Tokens.
+    /// Represents an individual TokenText of information. Tokenizer parses an input string to convert it into a list of Tokens.
     /// </summary>
     internal class Token
     {
-        private string token; // String representing the contents of a single token
-        private TokenCategory category;
+        public string TokenText { get; private set; } // String representing the contents of a single TokenText
+        public TokenCategory category { get; set; }
 
-        private int inputStart, inputEnd; // Store the indexes of the input string that comprise this token. [start, end)
+        // Store the indexes of the input string that comprise this TokenText. [start, end)
+        public int StartIndex { get; private set; }
+        public int EndIndex {get; private set;} 
 
-        public Token(string token, TokenCategory category, int start, int end)
+        public Token(string TokenText, TokenCategory category, int start, int end)
         {
-            this.token = token;
+            this.TokenText = TokenText;
             this.category = category;
-            inputStart = start;
-            inputEnd = end;
+            StartIndex = start;
+            EndIndex = end;
         }
 
         public override string ToString()
         {
-            return token;
-        }
-
-        public string GetToken()
-        {
-            return token;
-        }
-
-        public TokenCategory GetCategory()
-        {
-            return category;
-        }
-
-        public void SetCategory(TokenCategory category)
-        {
-            this.category = category;
-        }
-
-        public int GetStart()
-        {
-            return inputStart;
-        }
-
-        public int GetEnd()
-        {
-            return inputEnd;
+            return TokenText;
         }
     }
 }

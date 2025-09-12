@@ -10,29 +10,21 @@ namespace QuickCalculator.Evaluation
 {
     internal class Validator
     {
-        private List<Token> tokens;
-        private string assignVariable = "";
-        private CustomFunction defineFunction = null;
-        bool completedInquiry = false;
+        public string AssignVariable { get; private set; } = "";
+        // When a variable is being assigned, this will store the name of the variable
+        public CustomFunction DefineFunction { get; private set; } = null;
+        // When a function is being defined, this will store a CustomFunction object
+        public bool CompletedInquiry { get; private set; } = false;
+        /* This stores whether an inquiry (using the '?' operator) has been completed within the Validator.
+         * Variable inquiries can be completed and do not need to subsequently be parsed, but Function inquiries cannot
+         * be completed at the Validator level so they must be saved for the Parser.
+         */
 
-        public Validator(List<Token> tokens)
-        {
-            this.tokens = tokens;
-        }
+        private List<Token> Tokens; // List that stores the Tokens that will be passed in to the Validator
 
-        public string GetAssignVariable()
+        public Validator(List<Token> Tokens)
         {
-            return assignVariable;
-        }
-
-        public CustomFunction GetDefineFunction()
-        {
-            return defineFunction;
-        }
-
-        public bool GetCompletedInquiry()
-        {
-            return completedInquiry;
+            this.Tokens = Tokens;
         }
 
         public void Validate()
@@ -40,22 +32,22 @@ namespace QuickCalculator.Evaluation
             Stack<Token> parenStack = new Stack<Token>();
             int assignmentIndex = -1;
 
-            for (int i = 0; i < tokens.Count; i++)
+            for (int i = 0; i < Tokens.Count; i++)
             {
-                Token token = tokens[i];
-                switch (token.GetCategory())
+                Token TokenText = Tokens[i];
+                switch (TokenText.category)
                 {
                     case TokenCategory.OpenParen:
-                        parenStack.Push(token);
+                        parenStack.Push(TokenText);
                         break;
                     case TokenCategory.CloseParen:
                         if (parenStack.Count > 0)
                             parenStack.Pop();
-                        else ExceptionController.AddException("Unmatched closing parenthesis.", token.GetStart(), token.GetEnd(), 'V');
+                        else ExceptionController.AddException("Unmatched closing parenthesis.", TokenText.StartIndex, TokenText.EndIndex, 'V');
                         break;
                     case TokenCategory.Assignment:
                         if (assignmentIndex != -1)
-                            ExceptionController.AddException("Expression contains multiple assignment operators '='.", token.GetStart(), token.GetEnd(), 'V');
+                            ExceptionController.AddException("Expression contains multiple assignment operators '='.", TokenText.StartIndex, TokenText.EndIndex, 'V');
                         else
                         {
                             assignmentIndex = i;
@@ -63,12 +55,12 @@ namespace QuickCalculator.Evaluation
                         }
                         break;
                     case TokenCategory.Inquiry:
-                        if (i >= 1 && tokens[i - 1].GetCategory() == TokenCategory.Variable)
+                        if (i >= 1 && Tokens[i - 1].category == TokenCategory.Variable)
                         {
-                            completedInquiry = true;
+                            CompletedInquiry = true;
                             i = InquireVariable(i);
                         }
-                        else if (i >= 3 && tokens[i - 1].GetCategory() == TokenCategory.CloseBracket)
+                        else if (i >= 3 && Tokens[i - 1].category == TokenCategory.CloseBracket)
                         {
                             // completedInquiry is not set to true because function inquiries need to be completed in the parser
                             InquireFunction(i);
@@ -81,9 +73,9 @@ namespace QuickCalculator.Evaluation
                         break;
                     case TokenCategory.Command:
                         if (i != 0)
-                            ExceptionController.AddException("Command can only be at the start of the input.", token.GetStart(), token.GetEnd(), 'V');
+                            ExceptionController.AddException("Command can only be at the start of the input.", TokenText.StartIndex, TokenText.EndIndex, 'V');
                         else
-                            ValidateCommand(token, i);
+                            ValidateCommand(TokenText, i);
                         break;
                 }
             }
@@ -91,62 +83,62 @@ namespace QuickCalculator.Evaluation
             while (parenStack.Count > 0)
             {
                 Token openParen = parenStack.Pop();
-                ExceptionController.AddException("Unmatched open parenthesis.", openParen.GetStart(), openParen.GetEnd(), 'V');
+                ExceptionController.AddException("Unmatched open parenthesis.", openParen.StartIndex, openParen.EndIndex, 'V');
             }
         }
 
         /// <summary>
-        /// After tokenization is completed, if an assignment operator was encountered this method will be called.
-        /// Determines which token is the variable that will store the resulting value. This token is sent to be stored in
-        /// evaluator then is removed from the token list.
+        /// After TokenTextization is completed, if an assignment operator was encountered this method will be called.
+        /// Determines which TokenText is the variable that will store the resulting value. This TokenText is sent to be stored in
+        /// evaluator then is removed from the TokenText list.
         /// </summary>
         private void PrepareAssignment(int assignmentIndex)
         {
             int variableIdx;
 
-            if (assignmentIndex == 0 || assignmentIndex == tokens.Count - 1)
-            {   // Assignment operator is the first or last token
-                ExceptionController.AddException("Assignment needs two operands.", tokens[assignmentIndex].GetStart(), tokens[assignmentIndex].GetEnd(), 'V');
+            if (assignmentIndex == 0 || assignmentIndex == Tokens.Count - 1)
+            {   // Assignment operator is the first or last TokenText
+                ExceptionController.AddException("Assignment needs two operands.", Tokens[assignmentIndex].StartIndex, Tokens[assignmentIndex].EndIndex, 'V');
                 return;
             }
 
-            if (assignmentIndex != 1 && assignmentIndex != tokens.Count - 2)    // Assignment token is not second or second to last           
+            if (assignmentIndex != 1 && assignmentIndex != Tokens.Count - 2)    // Assignment TokenText is not second or second to last           
             {
                 // Check if this is an attempt to define a user function
                 if (DefineCustomFunction(assignmentIndex)) return;
 
-                ExceptionController.AddException("Assignment can only be done to an isolated variable", tokens[assignmentIndex].GetStart(), tokens[assignmentIndex].GetEnd(), 'V');
+                ExceptionController.AddException("Assignment can only be done to an isolated variable", Tokens[assignmentIndex].StartIndex, Tokens[assignmentIndex].EndIndex, 'V');
                 return;
             }
 
-            Token prevToken = tokens[assignmentIndex - 1];
-            Token nextToken = tokens[assignmentIndex + 1];
+            Token prevToken = Tokens[assignmentIndex - 1];
+            Token nextToken = Tokens[assignmentIndex + 1];
 
-            if (prevToken.GetCategory() == TokenCategory.Variable && nextToken.GetCategory() == TokenCategory.Variable) // If both are variables
+            if (prevToken.category == TokenCategory.Variable && nextToken.category == TokenCategory.Variable) // If both are variables
             {
-                if (SymbolTable.variables.ContainsKey(nextToken.GetToken()))
+                if (SymbolTable.variables.ContainsKey(nextToken.TokenText))
                 {   // So long as next is defined, we assign prev <= next (leftward asignment by default)
                     variableIdx = assignmentIndex - 1;
                 }
-                else if (SymbolTable.variables.ContainsKey(prevToken.GetToken()))
+                else if (SymbolTable.variables.ContainsKey(prevToken.TokenText))
                 {   // If next isn't defined but prev is, then we do rightward assignment - prev => next
                     variableIdx = assignmentIndex + 1;
                 }
                 else
                 {   // Otherwise, neither are defined and we cannot successfully assign either
-                    ExceptionController.AddException("Cannot assign between two undefined variables.", prevToken.GetStart(), nextToken.GetEnd(), 'V');
+                    ExceptionController.AddException("Cannot assign between two undefined variables.", prevToken.StartIndex, nextToken.EndIndex, 'V');
                     return;
                 }
 
             }
             else
             {
-                if (prevToken.GetCategory() == TokenCategory.Variable)
-                {   // prev is the token that will receive the assignment
+                if (prevToken.category == TokenCategory.Variable)
+                {   // prev is the TokenText that will receive the assignment
                     variableIdx = assignmentIndex - 1;
                 }
-                else if (nextToken.GetCategory() == TokenCategory.Variable)
-                {   // next is the token that will receive the assignment
+                else if (nextToken.category == TokenCategory.Variable)
+                {   // next is the TokenText that will receive the assignment
                     variableIdx = assignmentIndex + 1;
                 }
                 else
@@ -155,18 +147,18 @@ namespace QuickCalculator.Evaluation
                     // Check if this is an attempt to define a user function
                     if (DefineCustomFunction(assignmentIndex)) return;
 
-                    ExceptionController.AddException("At least one operand must be a variable for assignment", prevToken.GetStart(), nextToken.GetEnd(), 'V');
+                    ExceptionController.AddException("At least one operand must be a variable for assignment", prevToken.StartIndex, nextToken.EndIndex, 'V');
                     return;
                 }
             }
 
-            string variableName = tokens[variableIdx].GetToken();
+            string variableName = Tokens[variableIdx].TokenText;
 
             // Removing from the List will shift indices. We need to remove the lowest index twice to remove the variable and the assignment operator
-            tokens.RemoveAt(Math.Min(assignmentIndex, variableIdx));
-            tokens.RemoveAt(Math.Min(assignmentIndex, variableIdx));
+            Tokens.RemoveAt(Math.Min(assignmentIndex, variableIdx));
+            Tokens.RemoveAt(Math.Min(assignmentIndex, variableIdx));
 
-            assignVariable = variableName;
+            AssignVariable = variableName;
         }
 
 
@@ -174,123 +166,123 @@ namespace QuickCalculator.Evaluation
         {
             List<Token> parameters = new List<Token>();
 
-            if (assignmentIndex < 3 || tokens[0].GetCategory() != TokenCategory.Function ||
-                tokens[1].GetCategory() != TokenCategory.OpenBracket || tokens[assignmentIndex - 1].GetCategory() != TokenCategory.CloseBracket)
-            {   // There must be at least three tokens before the assignment: TokenCategory.Function TokenCategory.OpenBracket TokenCategory.CloseBracket. Otherwise don't interpret this as a user function
+            if (assignmentIndex < 3 || Tokens[0].category != TokenCategory.Function ||
+                Tokens[1].category != TokenCategory.OpenBracket || Tokens[assignmentIndex - 1].category != TokenCategory.CloseBracket)
+            {   // There must be at least three Tokens before the assignment: TokenCategory.Function TokenCategory.OpenBracket TokenCategory.CloseBracket. Otherwise don't interpret this as a user function
                 return false;
             }
 
 
-            FunctionToken functionToken = (FunctionToken)tokens[0];
-            if (SymbolTable.functions.ContainsKey(functionToken.GetToken())
-                && SymbolTable.functions[functionToken.GetToken()] is PrimitiveFunction)
+            FunctionToken functionToken = (FunctionToken)Tokens[0];
+            if (SymbolTable.functions.ContainsKey(functionToken.TokenText)
+                && SymbolTable.functions[functionToken.TokenText] is PrimitiveFunction)
             {
-                ExceptionController.AddException("Cannot redefine primitive function '" + functionToken.GetToken() + "'.", functionToken.GetStart(), assignmentIndex + 1, 'V');
+                ExceptionController.AddException("Cannot redefine primitive function '" + functionToken.TokenText + "'.", functionToken.StartIndex, assignmentIndex + 1, 'V');
                 return false;
             }
 
-            tokens.RemoveAt(0);     // Remove functionToken
-            tokens.RemoveAt(0);     // Remove TokenCategory.OpenBracket
+            Tokens.RemoveAt(0);     // Remove functionToken
+            Tokens.RemoveAt(0);     // Remove TokenCategory.OpenBracket
 
             int parameterCount = 0;
-            while (tokens.Count > 0)
+            while (Tokens.Count > 0)
             {
-                if (tokens[0].GetCategory() == TokenCategory.CloseBracket && functionToken.GetLevel() == ((LevelToken)tokens[0]).GetLevel())
-                {   // Break the loop when we find the TokenCategory.CloseBracket that terminates this function token
+                if (Tokens[0].category == TokenCategory.CloseBracket && functionToken.Level == ((LevelToken)Tokens[0]).Level)
+                {   // Break the loop when we find the TokenCategory.CloseBracket that terminates this function TokenText
                     break;
                 }
-                Token token = tokens[0];
-                switch (token.GetCategory())
+                Token TokenText = Tokens[0];
+                switch (TokenText.category)
                 {
                     case TokenCategory.Variable:
                         // If it is a variable, add it to the local variables so when we parse the function definition we see that the parameters are defined
                         parameterCount++;
-                        parameters.Add(token);
+                        parameters.Add(TokenText);
                         break;
                     case TokenCategory.Comma:
                         // Skip over the commas
                         break;
                     default:
-                        ExceptionController.AddException("Invalid token '" + token + "' in function signature.", token.GetStart(), token.GetEnd(), 'V');
+                        ExceptionController.AddException("Invalid TokenText '" + TokenText + "' in function signature.", TokenText.StartIndex, TokenText.EndIndex, 'V');
                         return false;
                 }
-                tokens.RemoveAt(0);
+                Tokens.RemoveAt(0);
             }
-            tokens.RemoveAt(0);     // Remove TokenCategory.CloseBracket
-            tokens.RemoveAt(0);     // Remove '='
+            Tokens.RemoveAt(0);     // Remove TokenCategory.CloseBracket
+            Tokens.RemoveAt(0);     // Remove '='
 
-            defineFunction = new CustomFunction(functionToken.GetToken(), parameters);
+            DefineFunction = new CustomFunction(functionToken.TokenText, parameters);
             return true;
         }
 
         private int InquireVariable(int inquiryIndex)
         {
-            tokens.RemoveAt(inquiryIndex);
-            Token varToken = tokens[inquiryIndex - 1];
-            if (!SymbolTable.variables.ContainsKey(varToken.GetToken()))
+            Tokens.RemoveAt(inquiryIndex);
+            Token varToken = Tokens[inquiryIndex - 1];
+            if (!SymbolTable.variables.ContainsKey(varToken.TokenText))
             {
-                ExceptionController.AddException("Cannot inquire on undefined variable '" + varToken + "'.", varToken.GetStart(), varToken.GetEnd(), 'V');
+                ExceptionController.AddException("Cannot inquire on undefined variable '" + varToken + "'.", varToken.StartIndex, varToken.EndIndex, 'V');
                 return inquiryIndex;
             }
 
-            Variable variable = SymbolTable.variables[tokens[tokens.Count - 1].GetToken()];
+            Variable variable = SymbolTable.variables[Tokens[Tokens.Count - 1].TokenText];
             // Insert parens in reverse order because they will be shifted by the later insertions
-            tokens.Insert(inquiryIndex, new LevelToken(")", TokenCategory.CloseParen, 0, 0, 0));
-            tokens.InsertRange(inquiryIndex, variable.GetTokens());      // Add variable's tokens
-            tokens.Add(new LevelToken("(", TokenCategory.OpenParen, 0, 0, 0));
-            // The levels of the paren tokens don't matter here because they will not be seen by the user
+            Tokens.Insert(inquiryIndex, new LevelToken(")", TokenCategory.CloseParen, 0, 0, 0));
+            Tokens.InsertRange(inquiryIndex, variable.Tokens);      // Add variable's Tokens
+            Tokens.Add(new LevelToken("(", TokenCategory.OpenParen, 0, 0, 0));
+            // The levels of the paren Tokens don't matter here because they will not be seen by the user
 
-            int index = inquiryIndex + variable.GetTokens().Count() + 1;
-            tokens.RemoveAt(index);
-            completedInquiry = true;
+            int index = inquiryIndex + variable.Tokens.Count + 1;
+            Tokens.RemoveAt(index);
+            CompletedInquiry = true;
             return index - 1;
         }
 
         private void InquireFunction(int inquiryIndex)
         {
-            tokens.RemoveAt(inquiryIndex);
-            LevelToken closedBracket = (LevelToken)tokens[inquiryIndex - 1];
+            Tokens.RemoveAt(inquiryIndex);
+            LevelToken closedBracket = (LevelToken)Tokens[inquiryIndex - 1];
             int i;
             for (i = inquiryIndex - 2; i >= 0; i--)
             {
-                if (tokens[i].GetCategory() == TokenCategory.Function && ((FunctionToken)tokens[i]).GetLevel() == closedBracket.GetLevel())
-                {   // Searches for the function token that matches this closed bracket
+                if (Tokens[i].category == TokenCategory.Function && ((FunctionToken)Tokens[i]).Level == closedBracket.Level)
+                {   // Searches for the function TokenText that matches this closed bracket
                     break;
                 }
             }
-            tokens.Insert(i, new Token("?", TokenCategory.Inquiry, 0, 0));
+            Tokens.Insert(i, new Token("?", TokenCategory.Inquiry, 0, 0));
         }
 
 
-        private void ValidateCommand(Token commandToken, int startIndex)
+        private void ValidateCommand(Token commandToken, int StartIndex)
         {
-            if (startIndex != 0)
+            if (StartIndex != 0)
             {
-                ExceptionController.AddException("Command must be at the beginning of the input.", commandToken.GetStart(), commandToken.GetEnd(), 'V');
+                ExceptionController.AddException("Command must be at the beginning of the input.", commandToken.StartIndex, commandToken.EndIndex, 'V');
                 return;
             }
 
-            if (!SymbolTable.commands.ContainsKey(commandToken.GetToken()))
+            if (!SymbolTable.commands.ContainsKey(commandToken.TokenText))
             {
-                ExceptionController.AddException("Unknown command '" + commandToken + "'.", commandToken.GetStart(), commandToken.GetEnd(), 'V');
+                ExceptionController.AddException("Unknown command '" + commandToken + "'.", commandToken.StartIndex, commandToken.EndIndex, 'V');
                 return;
             }
 
-            Command command = SymbolTable.commands[commandToken.GetToken()];
+            Command command = SymbolTable.commands[commandToken.TokenText];
 
-            if (tokens.Count - 1 != command.NumParameters())
+            if (Tokens.Count - 1 != command.NumParameters())
             {
                 ExceptionController.AddException("Command '" + commandToken + "' requires " + command.NumParameters() + " arguments, received "
-                                                    + (tokens.Count - 1) + ".", commandToken.GetStart(), commandToken.GetEnd(), 'V');
+                                                    + (Tokens.Count - 1) + ".", commandToken.StartIndex, commandToken.EndIndex, 'V');
                 return;
             }
 
             for (int i = 0; i < command.NumParameters(); i++)
             {
-                if (tokens[i + 1].GetCategory() != command.GetParameter(i))
+                if (Tokens[i + 1].category != command.GetParameter(i))
                 {
                     ExceptionController.AddException("Argument '" + (i + 1) + " for command " + commandToken + " should a " + command.GetParameter(i) +
-                                                     " token, recieved " + tokens[i + 1].GetCategory() + ".", tokens[i + 1].GetStart(), tokens[i + 1].GetEnd(), 'V');
+                                                     " TokenText, recieved " + Tokens[i + 1].category + ".", Tokens[i + 1].StartIndex, Tokens[i + 1].EndIndex, 'V');
                 }
             }
         }

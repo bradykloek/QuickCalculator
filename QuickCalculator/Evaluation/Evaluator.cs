@@ -12,65 +12,64 @@ namespace QuickCalculator.Evaluation
 {
     internal class Evaluator
     {
-        private bool executeInput;
-        private double result;
-        private Tokenizer tokenizer;
+        public List<Token> Tokens {  get; private set; } = new List<Token>();
+        public bool ExecuteInput { get; private set; }
+        public bool TemporaryResult { get; private set; }
+        public string ResultString { get; private set; }
+
         private double roundPrecision;
-        private string resultString;
-        private bool temporaryResult;
+        private double result;
 
-
-        public Evaluator(bool executeInput, double roundPrecision)
+        public Evaluator(bool ExecuteInput, double roundPrecision)
         {
-            this.executeInput = executeInput;
+            this.ExecuteInput = ExecuteInput;
             this.roundPrecision = roundPrecision;
             ExceptionController.ClearExceptions();
         }
 
         public void Evaluate(string input)
         {
-            tokenizer = new Tokenizer(input);
+            Tokenizer t = new Tokenizer(input);
+            // Create a Tokenizer even for empty inputs it is always created
 
             if (input.Length == 0) return;
 
-            tokenizer.Tokenize();
-            Validator validator = new Validator(tokenizer.GetTokens());
-            validator.Validate();
+            Tokens = t.Tokenize();
 
-            if (ExceptionController.GetCount() != 0) return;
+            Validator v = new Validator(Tokens);
+            v.Validate();
 
+            if (ExceptionController.Count() != 0) return;
 
-
-
-            if (tokenizer.GetTokens().Count > 0 && tokenizer.GetTokens()[0].GetCategory() == TokenCategory.Command)
+            if (Tokens.Count > 0 && Tokens[0].category == TokenCategory.Command)
             {
-                if(executeInput)
+                if(ExecuteInput)
                     ExecuteCommand();
                 return;
             }
 
-            if (validator.GetDefineFunction() != null)
+            if (v.DefineFunction != null)
             {
-                DefineCustomFunction(validator.GetDefineFunction());
-                resultString = input;
+                DefineCustomFunction(v.DefineFunction);
+                ResultString = input;
                 return;
             }
 
-            if (executeInput && validator.GetCompletedInquiry())
+            if (ExecuteInput && v.CompletedInquiry)
             {
-                resultString = TokenString();
+                ResultString = TokenString();
                 return;
             }
 
-            Parser parser = new Parser(tokenizer.GetTokens(), executeInput);
+            Parser parser = new Parser(Tokens, ExecuteInput);
             SetResult(parser.ParseExpression());
-            if (executeInput)
+            if (ExecuteInput)
             {
                 SymbolTable.SetAns(result);
-                if (validator.GetAssignVariable() != "")
+                if (v.AssignVariable != "")
                 {
-                    PerformAssignment(validator.GetAssignVariable());
-                    resultString = validator.GetAssignVariable() + " = " + result;
+                    PerformAssignment(v.AssignVariable);
+                    ResultString = v.AssignVariable + " = " + result;
                 }
             }
   
@@ -78,32 +77,30 @@ namespace QuickCalculator.Evaluation
 
         private void PerformAssignment(string variableName)
         {
-            SymbolTable.variables[variableName] = new Variable(result, tokenizer.GetTokens());
+            SymbolTable.variables[variableName] = new Variable(result, Tokens);
         }
 
 
         private void DefineCustomFunction(CustomFunction customFunction)
         {
-            List<Token> tokens = tokenizer.GetTokens();
-            customFunction.MarkParameters(tokens);
-            Parser definitionParser = new Parser(tokens, false, customFunction.GetLocals());
+            customFunction.MarkParameters(Tokens);
+            Parser definitionParser = new Parser(Tokens, false, customFunction.LocalVariables);
             definitionParser.ParseExpression();
             // definitionParser is only used to check the syntax of the function definition-- its result doesn't mean anything
 
 
-            if (executeInput)
+            if (ExecuteInput)
             {   // Only if the user hit enter should we actually save this custom function
-                customFunction.SetTokens(tokens);
-                SymbolTable.functions[customFunction.GetName()] = customFunction;
+                customFunction.Tokens = Tokens;
+                SymbolTable.functions[customFunction.Name] = customFunction;
             }
         }
 
         private void ExecuteCommand()
         {
-            List<Token> tokens = tokenizer.GetTokens();
-            Command command = SymbolTable.commands[tokens[0].GetToken()];
-            resultString = command.Execute(tokens.GetRange(1, tokens.Count - 1));
-            temporaryResult = true;
+            Command command = SymbolTable.commands[Tokens[0].TokenText];
+            ResultString = command.Execute(Tokens.GetRange(1, Tokens.Count - 1));
+            TemporaryResult = true;
         }
 
 
@@ -114,33 +111,16 @@ namespace QuickCalculator.Evaluation
             {
                 result = Math.Round(value);
             }
-            resultString = result.ToString();
+            ResultString = result.ToString();
         }
-
-        public bool TemporaryResult()
-        {
-            return temporaryResult;
-        }
-
-        public string Result()
-        {
-            return resultString;
-        }
-
         public string TokenString()
         {
-            List<Token> tokens = tokenizer.GetTokens();
             StringBuilder sb = new StringBuilder();
-            for (int i = 0; i < tokens.Count; i++)
+            for (int i = 0; i < Tokens.Count; i++)
             {
-                sb.Append(tokens[i] + " ");
+                sb.Append(Tokens[i] + " ");
             }
             return sb.ToString();
-        }
-
-        public List<Token> GetTokens()
-        {
-            return tokenizer.GetTokens();
         }
     }
 }

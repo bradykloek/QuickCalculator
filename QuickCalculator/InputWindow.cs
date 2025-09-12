@@ -28,7 +28,7 @@ namespace QuickCalculator
 
         double roundPrecision = 0.00000001;
 
-        bool temporaryResult = false;
+        bool TemporaryResult = false;
 
 
         public InputWindow()
@@ -38,10 +38,10 @@ namespace QuickCalculator
 
         private void inputTextBox_KeyDown(object sender, KeyEventArgs e)
         {
-            if (temporaryResult)
+            if (TemporaryResult)
             {
                 inputTextBox.Text = "";
-                temporaryResult = false;
+                TemporaryResult = false;
             }
 
             switch (e.KeyCode)
@@ -56,19 +56,19 @@ namespace QuickCalculator
                     Evaluator evaluator = new Evaluator(true, roundPrecision);
                     evaluator.Evaluate(inputTextBox.Text);
 
-                    if (ExceptionController.GetCount() != 0)
+                    if (ExceptionController.Count() != 0)
                         System.Windows.Forms.MessageBox.Show(ExceptionController.ErrorMessage());
                     else
                     {
-                        temporaryResult = evaluator.TemporaryResult();
-                        if (temporaryResult)
+                        TemporaryResult = evaluator.TemporaryResult;
+                        if (TemporaryResult)
                         {
-                            inputTextBox.Text = evaluator.Result();
+                            inputTextBox.Text = evaluator.ResultString;
                             return;
                         }
 
-                        UpdateTextBox(evaluator.Result());
-                        History.AddEntry(evaluator.Result().ToString());
+                        UpdateTextBox(evaluator.ResultString);
+                        History.AddEntry(evaluator.ResultString);
                         inputTextBox.BackColor = SUCCESS;
                     }
                     break;
@@ -98,7 +98,7 @@ namespace QuickCalculator
 
         private void inputTextBox_TextChanged(object sender, EventArgs e)
         {
-            if (temporaryResult) return;
+            if (TemporaryResult) return;
             Evaluator evaluator = new Evaluator(false, 0);
             evaluator.Evaluate(inputTextBox.Text);
             inputTextBox.BackColor = DEFAULT;
@@ -135,61 +135,61 @@ namespace QuickCalculator
         /// <summary>
         /// Colors all characters that caused Tokenizer Errors to red with an underline
         /// </summary>
-        /// <param name="tokenizer"></param> Collection of tokens that is parsed
+        /// <param name="TokenTextizer"></param> Collection of Tokens that is parsed
         private void colorErrors(Evaluator evaluator)
         {
-            List<EvaluationException> exceptions = ExceptionController.GetExceptions();
-            for (int i = 0; i < exceptions.Count; i++)
+            List<EvaluationException> Exceptions = ExceptionController.Exceptions;
+            for (int i = 0; i < Exceptions.Count; i++)
             {
-                int start = exceptions[i].GetStart();
-                int end = exceptions[i].GetEnd();
+                int start = Exceptions[i].StartIndex;
+                int end = Exceptions[i].EndIndex;
                 colorText(start, end, Color.Red, FontStyle.Underline);
             }
         }
 
         /// <summary>
-        /// Colors characters in the input text box to colors that indicate their token category
+        /// Colors characters in the input text box to colors that indicate their TokenText category
         /// </summary>
-        /// <param name="tokenizer"></param> Collection of tokens that is parsed
+        /// <param name="TokenTextizer"></param> Collection of Tokens that is parsed
         private void colorTokens(Evaluator evaluator)
         {
-            // The only text that isn't a part of a token is for assignments, since the assignment operater and assignee variable are removed
+            // The only text that isn't a part of a TokenText is for assignments, since the assignment operater and assignee variable are removed
             colorText(0, inputTextBox.Text.Length, ASSIGNMENT);
-            List<Token> tokens = evaluator.GetTokens();
+            List<Token> Tokens = evaluator.Tokens;
             Color[] parenColors = { PAREN1, PAREN2, PAREN3 };
             Color[] funcColors = { FUNC1, FUNC2, FUNC3 };
 
             int level;
-            for (int i = 0; i < tokens.Count; i++)
+            for (int i = 0; i < Tokens.Count; i++)
             {
-                int tokenStart = tokens[i].GetStart();
-                int tokenLength = tokens[i].GetEnd() - tokenStart;
-                switch (tokens[i].GetCategory())
+                int TokenTextStart = Tokens[i].StartIndex;
+                int TokenTextLength = Tokens[i].EndIndex - TokenTextStart;
+                switch (Tokens[i].category)
                 {
                     case TokenCategory.OpenParen:
                     case TokenCategory.CloseParen:
-                        level = ((LevelToken)tokens[i]).GetLevel();
-                        colorText(tokenStart, 1, parenColors[level % 3]);
+                        level = ((LevelToken)Tokens[i]).Level;
+                        colorText(TokenTextStart, 1, parenColors[level % 3]);
                         break;
                     case TokenCategory.Number:
-                        colorText(tokenStart, tokenLength, NUMBER);
+                        colorText(TokenTextStart, TokenTextLength, NUMBER);
                         break;
                     case TokenCategory.Operator:
-                        colorText(tokenStart, tokenLength, OPERATOR);
+                        colorText(TokenTextStart, TokenTextLength, OPERATOR);
                         break;
                     case TokenCategory.Variable:
-                        colorText(tokenStart, tokenLength, VARIABLE);
+                        colorText(TokenTextStart, TokenTextLength, VARIABLE);
                         break;
                     case TokenCategory.Function:
                     case TokenCategory.OpenBracket:
                     case TokenCategory.CloseBracket:
                     case TokenCategory.Comma:
-                        // All of these tokens are only found in function calls
-                        level = ((LevelToken)tokens[i]).GetLevel();
-                        colorText(tokenStart, tokenLength, funcColors[level % 3]);
+                        // All of these Tokens are only found in function calls
+                        level = ((LevelToken)Tokens[i]).Level;
+                        colorText(TokenTextStart, TokenTextLength, funcColors[level % 3]);
                         break;
                     case TokenCategory.Parameter:
-                        colorText(tokenStart, tokenLength, PARAMETER);
+                        colorText(TokenTextStart, TokenTextLength, PARAMETER);
                         break;
                 }
             }

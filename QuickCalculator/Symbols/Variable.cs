@@ -9,30 +9,20 @@ namespace QuickCalculator.Symbols
 {
     internal class Variable
     {
-        private double value;
-        private List<Token> tokens;
+        public double value { get; private set; }
+        public List<Token> Tokens { get; private set; }
 
-        public Variable(double value, List<Token> tokens)
+        public Variable(double value, List<Token> Tokens)
         {
             this.value = value;
-            this.tokens = tokens;
+            this.Tokens = Tokens;
         }
 
         public Variable(double value)
         {
             this.value = value;
-            tokens = new List<Token>();
-            tokens.Add(new Token(value.ToString(), TokenCategory.Number, 0, 0));
-        }
-
-        public double GetValue()
-        {
-            return value;
-        }
-
-        public List<Token> GetTokens()
-        {
-            return tokens;
+            Tokens = new List<Token>();
+            Tokens.Add(new Token(value.ToString(), TokenCategory.Number, 0, 0));
         }
     }
 }

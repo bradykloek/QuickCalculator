@@ -9,41 +9,37 @@ namespace QuickCalculator
     internal class ExceptionController
     {
 
-        private static List<EvaluationException> exceptions = new List<EvaluationException>();
+        public static List<EvaluationException> Exceptions { get; private set; } 
+            = new List<EvaluationException>();
 
         /// <summary>
-        /// AddException handles any invalid input. It either throws an exception or stores the exception in exceptions
+        /// AddException handles any invalid input. It either throws an exception or stores the exception in Exceptions
         /// </summary>
         /// <param name="message"></param> Error Message
         /// <param name="charIndex"></param> Index of the input string that caused the error
         /// <exception cref="EvaluationException"></exception>
-        public static void AddException(string message, int start, int end, char source)
+        public static void AddException(string message, int start, int end, char Source)
         {
-            exceptions.Add(new EvaluationException(message, start, end, source));
+            Exceptions.Add(new EvaluationException(message, start, end, Source));
         }
 
         public static void ClearExceptions()
         {
-            exceptions.Clear();
+            Exceptions.Clear();
         }
 
-        public static int GetCount()
+        public static int Count()
         {
-            return exceptions.Count;
-        }
-
-        public static List<EvaluationException> GetExceptions()
-        {
-            return exceptions;
+            return Exceptions.Count;
         }
 
         public static string ErrorMessage()
         {
             StringBuilder sb = new StringBuilder();
-            sb.Append("Evaluator encountered " + exceptions.Count + " errors:\n");
-            for (int i = 0; i < exceptions.Count; i++)
+            sb.Append("Evaluator encountered " + Exceptions.Count + " errors:\n");
+            for (int i = 0; i < Exceptions.Count; i++)
             {
-                sb.Append(" " + (i + 1) + ":   " + exceptions[i].ToString() + "\n");
+                sb.Append(" " + (i + 1) + ":   " + Exceptions[i].ToString() + "\n");
             }
             return sb.ToString();
         }

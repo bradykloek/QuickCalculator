@@ -7,9 +7,9 @@ using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace QuickCalculator.Symbols
 {
-    internal abstract class CalculatorFunction
+    internal abstract class CalcFunction
     {
-        public abstract int GetNumParameters();
-        public abstract double Execute(List<double> args); 
+        public abstract double Execute(List<double> args);
+        public abstract int NumParameters();
     }
 }

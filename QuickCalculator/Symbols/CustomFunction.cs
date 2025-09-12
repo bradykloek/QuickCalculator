@@ -11,116 +11,98 @@ using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace QuickCalculator.Symbols
 {
-    internal class CustomFunction : CalculatorFunction
+    internal class CustomFunction : CalcFunction
     {
-        private string name;
+        public List<Token> Tokens { get; set; }
+        public SymbolTable LocalVariables { get; private set; } = new SymbolTable();
+        public string Name { get; private set; }
+
         private List<Token> parameters;
-        private List<Token> tokens;
-        private SymbolTable localVariables = new SymbolTable();
         public CustomFunction(string name, List<Token> parameters)
         {
-            this.name = name;
+            this.Name = name;
             this.parameters = parameters;
             DummyParameters();
+        }
+
+        public override int NumParameters()
+        {
+            return parameters.Count;
         }
 
         private void DummyParameters()
         {
             for (int i = 0; i < parameters.Count; i++)
             {
-                localVariables.AddLocal(parameters[i].GetToken(), 0);
+                LocalVariables.AddLocal(parameters[i].TokenText, 0);
             }
-        }
-
-        public string GetName()
-        {
-            return name;
-        }
-
-        public List<Token> GetTokens()
-        {
-            return tokens;
-        }
-        public void SetTokens(List<Token> tokens)
-        {
-            this.tokens = tokens;
         }
 
         
         /// <summary>
-        /// Updates the category of tokens that are in the parameters list to indicate they are arguments. 
+        /// Updates the category of Tokens that are in the parameters list to indicate they are arguments. 
         /// If this input is defining the function, this also adds the parameters as local variables with dummy values
         /// so the parser doesn't throw an exception for undefined variables.
         /// </summary>
-        /// <param name="tokens"></param>   The list of all tokens from the tokenizer
-        /// <param name="definingFunction"></param> Whether or not we are currently defining a function
+        /// <param Name="Tokens"></param>   The list of all Tokens from the TokenTextizer
+        /// <param Name="definingFunction"></param> Whether or not we are currently defining a function
         /// <returns></returns> 
         /// If we are defining a function, returns a SymbolTable that holds the parameters with dummy values.
         /// Otherwise it will return an empty SymbolTable that won't be used.
-        public void MarkParameters(List<Token> tokens)
+        public void MarkParameters(List<Token> Tokens)
         {
             for (int i = 0; i < parameters.Count; i++)
             {
-                for(int j = 0; j < tokens.Count; j++)
+                for(int j = 0; j < Tokens.Count; j++)
                 {
-                    if (parameters[i].GetToken().Equals(tokens[j].GetToken()))
-                    {   // If this parameter matches this token, update the token's category to be an argument 
-                        tokens[j].SetCategory(TokenCategory.Parameter);
+                    if (parameters[i].TokenText.Equals(Tokens[j].TokenText))
+                    {   // If this parameter matches this TokenText, update the TokenText's category to be an argument 
+                        Tokens[j].category = TokenCategory.Parameter;
                     }
                 }
             }
         }
 
-        public override int GetNumParameters()
-        {
-            return parameters.Count;
-        }
-
-        public SymbolTable GetLocals()
-        {
-            return localVariables;
-        }
-
         /// <summary>
         /// Executes the custom function
         /// </summary>
-        /// <param name="args"></param> List of arguments that got passed in to this functoin
+        /// <param Name="args"></param> List of arguments that got passed in to this functoin
         /// <returns></returns>
         public override double Execute(List<double> args)
         {
             PairArguments(args);
-            if (localVariables != null)
+            if (LocalVariables != null)
             {
-                Parser functionParser = new Parser(tokens, true, localVariables);
+                Parser functionParser = new Parser(Tokens, true, LocalVariables);
                 return functionParser.ParseExpression();
             }
             return 1;
         }
 
         /// <summary>
-        /// Returns a list representing the tokens of this function when the parameters are replaced by the values of the arguments
+        /// Returns a list representing the Tokens of this function when the parameters are replaced by the values of the arguments
         /// </summary>
-        /// <param name="args"></param> The arguments which are already parsed into doubles
+        /// <param Name="args"></param> The arguments which are already parsed into doubles
         /// <returns></returns> The resulting Token List of the inquiry
         public List<Token> Inquire(List<double> args)
         {
             if(args.Count == 0)
-            {   // If a function call with no parameters is inquired, we interpret it as the user inquiring on the raw tokens that defined the function
-                return tokens;
+            {   // If a function call with no parameters is inquired, we interpret it as the user inquiring on the raw Tokens that defined the function
+                return Tokens;
             }
 
             PairArguments(args);
             List<Token> inquiryTokens = new List<Token>();
-            for(int i = 0; i < tokens.Count; i++)
+            for(int i = 0; i < Tokens.Count; i++)
             {
-                Token token = tokens[i];
-                if(token.GetCategory() == TokenCategory.Parameter)
-                {   // If we are on an argument, add a new token that represents its numerical value
-                    inquiryTokens.Add(new Token(localVariables.GetLocal(token.GetToken()).ToString(),TokenCategory.Number,0,0));
+                Token TokenText = Tokens[i];
+                if(TokenText.category == TokenCategory.Parameter)
+                {   // If we are on an argument, add a new TokenText that represents its numerical value
+                    inquiryTokens.Add(new Token(LocalVariables.GetLocal(TokenText.TokenText).ToString(),TokenCategory.Number,0,0));
                 }
                 else
-                {   // Otherwise add the raw token
-                    inquiryTokens.Add(tokens[i]);
+                {   // Otherwise add the raw TokenText
+                    inquiryTokens.Add(Tokens[i]);
                 }
             }
             return inquiryTokens;
@@ -129,19 +111,19 @@ namespace QuickCalculator.Symbols
         /// <summary>
         /// Locally assigns the parameters to the passed in arguments.
         /// </summary>
-        /// <param name="args"></param> List of argument values
+        /// <param Name="args"></param> List of argument values
         /// <returns></returns> Returns a SymbolTable representing the local assignments
         private void PairArguments(List<double> args)
         {
-            if (tokens == null)
+            if (Tokens == null)
             {
-                ExceptionController.AddException("Custom Function '" + name + "' not given definition tokens.", 0, 0, 'F');
+                ExceptionController.AddException("Custom Function '" + Name + "' not given definition Tokens.", 0, 0, 'F');
                 return;
             }
 
             if (args.Count != parameters.Count)
             {
-                ExceptionController.AddException("Custom Function '" + name + "' expected " + parameters.Count +
+                ExceptionController.AddException("Custom Function '" + Name + "' expected " + parameters.Count +
                                         " arguments, received " + args.Count, 0, 0, 'F');
                 return;
             }
@@ -149,13 +131,13 @@ namespace QuickCalculator.Symbols
             // First we must assign all of the arguments to the correct parameters as local variables
             for (int i = 0; i < parameters.Count; i++)
             {
-                localVariables.AddLocal(parameters[i].GetToken(), args[i]);
+                LocalVariables.AddLocal(parameters[i].TokenText, args[i]);
             }
         }
 
         public override string ToString()
         {
-            StringBuilder sb = new StringBuilder(name);
+            StringBuilder sb = new StringBuilder(Name);
             sb.Append(TokenCategory.OpenBracket);
 
             for (int i = 0; i < parameters.Count; i++)

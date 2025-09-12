@@ -14,7 +14,7 @@ namespace QuickCalculator.Evaluation
         // When a variable is being assigned, this will store the name of the variable
         public CustomFunction DefineFunction { get; private set; } = null;
         // When a function is being defined, this will store a CustomFunction object
-        public bool CompletedInquiry { get; private set; } = false;
+        public bool IncludesInquiry { get; private set; } = false;
         /* This stores whether an inquiry (using the '?' operator) has been completed within the Validator.
          * Variable inquiries can be completed and do not need to subsequently be parsed, but Function inquiries cannot
          * be completed at the Validator level so they must be saved for the Parser.
@@ -55,9 +55,9 @@ namespace QuickCalculator.Evaluation
                         }
                         break;
                     case TokenCategory.Inquiry:
+                        IncludesInquiry = true;
                         if (i >= 1 && Tokens[i - 1].category == TokenCategory.Variable)
                         {
-                            CompletedInquiry = true;
                             i = InquireVariable(i);
                         }
                         else if (i >= 3 && Tokens[i - 1].category == TokenCategory.CloseBracket)
@@ -225,16 +225,15 @@ namespace QuickCalculator.Evaluation
                 return inquiryIndex;
             }
 
-            Variable variable = SymbolTable.variables[Tokens[Tokens.Count - 1].TokenText];
+            Variable variable = SymbolTable.variables[varToken.TokenText];
             // Insert parens in reverse order because they will be shifted by the later insertions
-            Tokens.Insert(inquiryIndex, new LevelToken(")", TokenCategory.CloseParen, 0, 0, 0));
-            Tokens.InsertRange(inquiryIndex, variable.Tokens);      // Add variable's Tokens
-            Tokens.Add(new LevelToken("(", TokenCategory.OpenParen, 0, 0, 0));
+            Tokens.Insert(inquiryIndex - 1, new LevelToken(")", TokenCategory.CloseParen, 0, 0, 0));
+            Tokens.InsertRange(inquiryIndex - 1, variable.Tokens);      // Add variable's Tokens
+            Tokens.Insert(inquiryIndex - 1, new LevelToken("(", TokenCategory.OpenParen, 0, 0, 0));
             // The levels of the paren Tokens don't matter here because they will not be seen by the user
 
             int index = inquiryIndex + variable.Tokens.Count + 1;
             Tokens.RemoveAt(index);
-            CompletedInquiry = true;
             return index - 1;
         }
 

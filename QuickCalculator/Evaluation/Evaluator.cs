@@ -55,12 +55,6 @@ namespace QuickCalculator.Evaluation
                 return;
             }
 
-            if (ExecuteInput && v.CompletedInquiry)
-            {
-                ResultString = TokenString();
-                return;
-            }
-
             Parser parser = new Parser(Tokens, ExecuteInput);
             SetResult(parser.ParseExpression());
             if (ExecuteInput)
@@ -71,6 +65,8 @@ namespace QuickCalculator.Evaluation
                     PerformAssignment(v.AssignVariable);
                     ResultString = v.AssignVariable + " = " + result;
                 }
+
+                if(v.IncludesInquiry) ResultString = TokenString();
             }
   
         }

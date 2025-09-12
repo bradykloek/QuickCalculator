@@ -1,10 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Data;
-using System.Diagnostics;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.Text;
 using QuickCalculator.Symbols;
 using QuickCalculator.Tokens;
 
@@ -30,10 +24,6 @@ namespace QuickCalculator.Evaluation
         public void Evaluate(string input)
         {
             Tokenizer t = new Tokenizer(input);
-            // Create a Tokenizer even for empty inputs it is always created
-
-            if (input.Length == 0) return;
-
             Tokens = t.Tokenize();
 
             Validator v = new Validator(Tokens);
@@ -51,7 +41,8 @@ namespace QuickCalculator.Evaluation
             if (v.DefineFunction != null)
             {
                 DefineCustomFunction(v.DefineFunction);
-                ResultString = input;
+                ResultString = "Function '" + v.DefineFunction.Name + "' Defined";
+                TemporaryResult = true;
                 return;
             }
 
@@ -64,6 +55,7 @@ namespace QuickCalculator.Evaluation
                 {
                     PerformAssignment(v.AssignVariable);
                     ResultString = v.AssignVariable + " = " + result;
+                    TemporaryResult = true;
                 }
 
                 if(v.IncludesInquiry) ResultString = TokenString();
@@ -105,18 +97,13 @@ namespace QuickCalculator.Evaluation
             result = value;
             if (roundPrecision > 0 && Math.Abs(result - Math.Round(result)) <= roundPrecision)
             {
-                result = Math.Round(value);
+                result = Math.Round(result);
             }
             ResultString = result.ToString();
         }
         public string TokenString()
         {
-            StringBuilder sb = new StringBuilder();
-            for (int i = 0; i < Tokens.Count; i++)
-            {
-                sb.Append(Tokens[i] + " ");
-            }
-            return sb.ToString();
+            return string.Join(" ", Tokens);
         }
     }
 }

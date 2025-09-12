@@ -1,9 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using QuickCalculator.Tokens;
+﻿using QuickCalculator.Tokens;
 
 namespace QuickCalculator.Symbols
 {
@@ -21,8 +16,7 @@ namespace QuickCalculator.Symbols
         public Variable(double value)
         {
             this.value = value;
-            Tokens = new List<Token>();
-            Tokens.Add(new Token(value.ToString(), TokenCategory.Number, 0, 0));
+            Tokens = new List<Token> { new Token(value.ToString(), TokenCategory.Number, 0, 0) };
         }
     }
 }

@@ -1,13 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Linq;
-using System.Reflection.Metadata.Ecma335;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.Text;
 using QuickCalculator.Evaluation;
 using QuickCalculator.Tokens;
-using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace QuickCalculator.Symbols
 {
@@ -44,7 +37,7 @@ namespace QuickCalculator.Symbols
         /// If this input is defining the function, this also adds the parameters as local variables with dummy values
         /// so the parser doesn't throw an exception for undefined variables.
         /// </summary>
-        /// <param Name="Tokens"></param>   The list of all Tokens from the TokenTextizer
+        /// <param Name="Tokens"></param>   The list of all Tokens from the tokenizer
         /// <param Name="definingFunction"></param> Whether or not we are currently defining a function
         /// <returns></returns> 
         /// If we are defining a function, returns a SymbolTable that holds the parameters with dummy values.
@@ -56,7 +49,7 @@ namespace QuickCalculator.Symbols
                 for(int j = 0; j < Tokens.Count; j++)
                 {
                     if (parameters[i].TokenText.Equals(Tokens[j].TokenText))
-                    {   // If this parameter matches this TokenText, update the TokenText's category to be an argument 
+                    {   // If this parameter matches this token, update the token's category to be an argument 
                         Tokens[j].category = TokenCategory.Parameter;
                     }
                 }
@@ -95,13 +88,13 @@ namespace QuickCalculator.Symbols
             List<Token> inquiryTokens = new List<Token>();
             for(int i = 0; i < Tokens.Count; i++)
             {
-                Token TokenText = Tokens[i];
-                if(TokenText.category == TokenCategory.Parameter)
-                {   // If we are on an argument, add a new TokenText that represents its numerical value
-                    inquiryTokens.Add(new Token(LocalVariables.GetLocal(TokenText.TokenText).ToString(),TokenCategory.Number,0,0));
+                Token token = Tokens[i];
+                if(token.category == TokenCategory.Parameter)
+                {   // If we are on an argument, add a new token that represents its numerical value
+                    inquiryTokens.Add(new Token(LocalVariables.GetLocal(token.TokenText).ToString(),TokenCategory.Number,0,0));
                 }
                 else
-                {   // Otherwise add the raw TokenText
+                {   // Otherwise add the raw token
                     inquiryTokens.Add(Tokens[i]);
                 }
             }

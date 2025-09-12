@@ -1,29 +1,28 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace QuickCalculator
+﻿namespace QuickCalculator
 {
-    internal class EvaluationException : Exception
+    internal class EvaluationException
     {
         public int StartIndex { get; private set; }
         public int EndIndex { get; private set; }
 		public char Source { get; private set; }
+        public string Message { get; private set; }
 		public EvaluationException() { }
-        public EvaluationException(string message) : base(message) { }
-
-        public EvaluationException(string message, int start, int end, char Source) : base(message)
+        public EvaluationException(string message)
         {
+            Message = message;
+        }
+
+        public EvaluationException(string message, int start, int end, char source)
+        {
+            Message = message;
             StartIndex = start;
             EndIndex = end;
-            this.Source = Source;
+            Source = source;
         }
 
         public override string ToString()
         {
-            return "[" + StartIndex + "] " + base.Message + " (" + Source + ")";
+            return "[" + StartIndex + "] " + Message + " (" + Source + ")";
         }
 
     }

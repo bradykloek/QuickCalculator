@@ -131,8 +131,9 @@ namespace QuickCalculator.Evaluation
                     currentIndex++;
                     break;
                 case TokenCategory.OpenParen:
-                    currentIndex++;    // Skip TokenCategory.OpenParen token
+                    currentIndex++;     // Skip ( token
                     value = ParseExpression();
+                    currentIndex++;     // Skip ) token
                     break;
                 case TokenCategory.Variable:
                 case TokenCategory.Parameter:

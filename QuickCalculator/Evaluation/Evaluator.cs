@@ -24,11 +24,14 @@ namespace QuickCalculator.Evaluation
 
         public void Evaluate(string input)
         {
-            Tokenizer t = new Tokenizer(input);
-            Tokens = t.Tokenize();
+            Tokenizer tokenizer = new Tokenizer(input);
+            Tokens = tokenizer.Tokenize();
 
-            Validator v = new Validator(Tokens);
-            v.Validate();
+            Validator validator = new Validator(Tokens);
+            validator.Validate();
+
+            Transformer transformer = new Transformer(Tokens);
+            transformer.Transform();
 
             if (ErrorController.Count() != 0) return;
 
@@ -39,10 +42,10 @@ namespace QuickCalculator.Evaluation
                 return;
             }
 
-            if (v.DefineFunction != null)
+            if (transformer.DefineFunction != null)
             {
-                DefineCustomFunction(v.DefineFunction);
-                ResultString = "Function '" + v.DefineFunction.Name + "' Defined";
+                DefineCustomFunction(transformer.DefineFunction);
+                ResultString = "Function '" + transformer.DefineFunction.Name + "' Defined";
                 TemporaryResult = true;
                 return;
             }
@@ -52,14 +55,14 @@ namespace QuickCalculator.Evaluation
             if (ExecuteInput)
             {
                 SymbolTable.SetAns(result);
-                if (v.AssignVariable != "")
+                if (transformer.AssignVariable != "")
                 {
-                    PerformAssignment(v.AssignVariable);
-                    ResultString = v.AssignVariable + " = " + result;
+                    PerformAssignment(transformer.AssignVariable);
+                    ResultString = transformer.AssignVariable + " = " + result;
                     TemporaryResult = true;
                 }
 
-                if(v.IncludesInquiry) ResultString = TokenString();
+                if(transformer.IncludesInquiry) ResultString = TokenString();
             }
   
         }

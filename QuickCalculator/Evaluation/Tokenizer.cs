@@ -76,14 +76,14 @@ namespace QuickCalculator.Evaluation
         {
             while(NextChar())
             {
-                if (current.Equals(' ')) {
+                if (current.Equals(' ') || current.Equals('\n')) {
                     /*  Whitespace will be skipped and end any token except for Numbers. In Numbers, the user may wish to use whitespace
                      *  to separate digits similar to commas. */
-                    if (category == TokenCategory.Uncategorized || category == TokenCategory.Number)
+                    if (category != TokenCategory.Uncategorized && category != TokenCategory.Number)
                     {
-                        continue;
+                        AddToken();
                     }
-                    else AddToken();
+                    continue;
                 }
 
                 switch (category)

@@ -5,6 +5,7 @@
         Tokenizer,
         Validator,
         Parser,
-        Function
+        Function,
+        Transformer
     }
 }

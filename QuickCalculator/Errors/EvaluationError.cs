@@ -1,18 +1,18 @@
-﻿namespace QuickCalculator
+﻿namespace QuickCalculator.Errors
 {
-    internal class EvaluationException
+    internal class EvaluationError
     {
         public int StartIndex { get; private set; }
         public int EndIndex { get; private set; }
-		public char Source { get; private set; }
+		public ErrorSource Source { get; private set; }
         public string Message { get; private set; }
-		public EvaluationException() { }
-        public EvaluationException(string message)
+		public EvaluationError() { }
+        public EvaluationError(string message)
         {
             Message = message;
         }
 
-        public EvaluationException(string message, int start, int end, char source)
+        public EvaluationError(string message, int start, int end, ErrorSource source)
         {
             Message = message;
             StartIndex = start;

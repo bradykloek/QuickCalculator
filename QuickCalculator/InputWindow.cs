@@ -1,4 +1,5 @@
-    using QuickCalculator.Evaluation;
+using QuickCalculator.Errors;
+using QuickCalculator.Evaluation;
     using QuickCalculator.Tokens;
 
     namespace QuickCalculator
@@ -51,8 +52,8 @@
                         Evaluator evaluator = new Evaluator(true, roundPrecision);
                         evaluator.Evaluate(inputTextBox.Text);
 
-                        if (ExceptionController.Count() != 0)
-                            System.Windows.Forms.MessageBox.Show(ExceptionController.ErrorMessage());
+                        if (ErrorController.Count() != 0)
+                            System.Windows.Forms.MessageBox.Show(ErrorController.ErrorMessage());
                         else
                         {
                             TemporaryResult = evaluator.TemporaryResult;
@@ -134,11 +135,11 @@
             /// <param name="tokenizer"></param> Collection of Tokens that is parsed
             private void colorErrors(Evaluator evaluator)
             {
-                List<EvaluationException> Exceptions = ExceptionController.Exceptions;
-                for (int i = 0; i < Exceptions.Count; i++)
+                List<EvaluationError> Errors = ErrorController.Errors;
+                for (int i = 0; i < Errors.Count; i++)
                 {
-                    int start = Exceptions[i].StartIndex;
-                    int end = Exceptions[i].EndIndex;
+                    int start = Errors[i].StartIndex;
+                    int end = Errors[i].EndIndex;
                     colorText(start, end, Color.Red, FontStyle.Underline);
                 }
             }

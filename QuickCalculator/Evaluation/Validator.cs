@@ -1,4 +1,5 @@
-﻿using QuickCalculator.Symbols;
+﻿using QuickCalculator.Errors;
+using QuickCalculator.Symbols;
 using QuickCalculator.Tokens;
 
 namespace QuickCalculator.Evaluation
@@ -38,11 +39,11 @@ namespace QuickCalculator.Evaluation
                     case TokenCategory.CloseParen:
                         if (parenStack.Count > 0)
                             parenStack.Pop();
-                        else ExceptionController.AddException("Unmatched closing parenthesis.", token.StartIndex, token.EndIndex, 'V');
+                        else ErrorController.AddError("Unmatched closing parenthesis.", token.StartIndex, token.EndIndex, ErrorSource.Validator);
                         break;
                     case TokenCategory.Assignment:
                         if (assignmentIndex != -1)
-                            ExceptionController.AddException("Expression contains multiple assignment operators '='.", token.StartIndex, token.EndIndex, 'V');
+                            ErrorController.AddError("Expression contains multiple assignment operators '='.", token.StartIndex, token.EndIndex, ErrorSource.Validator);
                         else
                         {
                             assignmentIndex = i;
@@ -62,13 +63,13 @@ namespace QuickCalculator.Evaluation
                         }
                         else
                         {
-                            ExceptionController.AddException("Inquiry operator '?' can only be used after a Variable, Custom Function with the correct number of arguments," +
-                                                            " or Custom Function with zero arguments.", i, i + 1, 'V');
+                            ErrorController.AddError("Inquiry operator '?' can only be used after a Variable, Custom Function with the correct number of arguments," +
+                                                            " or Custom Function with zero arguments.", i, i + 1, ErrorSource.Validator);
                         }
                         break;
                     case TokenCategory.Command:
                         if (i != 0)
-                            ExceptionController.AddException("Command can only be at the start of the input.", token.StartIndex, token.EndIndex, 'V');
+                            ErrorController.AddError("Command can only be at the start of the input.", token.StartIndex, token.EndIndex, ErrorSource.Validator);
                         else
                             ValidateCommand(token, i);
                         break;
@@ -78,7 +79,7 @@ namespace QuickCalculator.Evaluation
             while (parenStack.Count > 0)
             {
                 Token openParen = parenStack.Pop();
-                ExceptionController.AddException("Unmatched open parenthesis.", openParen.StartIndex, openParen.EndIndex, 'V');
+                ErrorController.AddError("Unmatched open parenthesis.", openParen.StartIndex, openParen.EndIndex, ErrorSource.Validator);
             }
         }
 
@@ -93,7 +94,7 @@ namespace QuickCalculator.Evaluation
 
             if (assignmentIndex == 0 || assignmentIndex == tokens.Count - 1)
             {   // Assignment operator is the first or last token
-                ExceptionController.AddException("Assignment needs two operands.", tokens[assignmentIndex].StartIndex, tokens[assignmentIndex].EndIndex, 'V');
+                ErrorController.AddError("Assignment needs two operands.", tokens[assignmentIndex].StartIndex, tokens[assignmentIndex].EndIndex, ErrorSource.Validator);
                 return;
             }
 
@@ -102,7 +103,7 @@ namespace QuickCalculator.Evaluation
                 // Check if this is an attempt to define a user function
                 if (DefineCustomFunction(assignmentIndex)) return;
 
-                ExceptionController.AddException("Assignment can only be done to an isolated variable", tokens[assignmentIndex].StartIndex, tokens[assignmentIndex].EndIndex, 'V');
+                ErrorController.AddError("Assignment can only be done to an isolated variable", tokens[assignmentIndex].StartIndex, tokens[assignmentIndex].EndIndex, ErrorSource.Validator);
                 return;
             }
 
@@ -121,7 +122,7 @@ namespace QuickCalculator.Evaluation
                 }
                 else
                 {   // Otherwise, neither are defined and we cannot successfully assign either
-                    ExceptionController.AddException("Cannot assign between two undefined variables.", prevToken.StartIndex, nextToken.EndIndex, 'V');
+                    ErrorController.AddError("Cannot assign between two undefined variables.", prevToken.StartIndex, nextToken.EndIndex, ErrorSource.Validator);
                     return;
                 }
 
@@ -142,7 +143,7 @@ namespace QuickCalculator.Evaluation
                     // Check if this is an attempt to define a user function
                     if (DefineCustomFunction(assignmentIndex)) return;
 
-                    ExceptionController.AddException("At least one operand must be a variable for assignment.", prevToken.StartIndex, nextToken.EndIndex, 'V');
+                    ErrorController.AddError("At least one operand must be a variable for assignment.", prevToken.StartIndex, nextToken.EndIndex, ErrorSource.Validator);
                     return;
                 }
             }
@@ -171,7 +172,7 @@ namespace QuickCalculator.Evaluation
             if (SymbolTable.functions.ContainsKey(functionToken.TokenText)
                 && SymbolTable.functions[functionToken.TokenText] is PrimitiveFunction)
             {
-                ExceptionController.AddException("Cannot redefine primitive function '" + functionToken.TokenText + "'.", functionToken.StartIndex, assignmentIndex + 1, 'V');
+                ErrorController.AddError("Cannot redefine primitive function '" + functionToken.TokenText + "'.", functionToken.StartIndex, assignmentIndex + 1, ErrorSource.Validator);
                 return false;
             }
 
@@ -195,7 +196,7 @@ namespace QuickCalculator.Evaluation
                         // Skip over the commas
                         break;
                     default:
-                        ExceptionController.AddException("Invalid token '" + token + "' in function signature.", token.StartIndex, token.EndIndex, 'V');
+                        ErrorController.AddError("Invalid token '" + token + "' in function signature.", token.StartIndex, token.EndIndex, ErrorSource.Validator);
                         return false;
                 }
             }
@@ -212,7 +213,7 @@ namespace QuickCalculator.Evaluation
             Token varToken = tokens[inquiryIndex - 1];
             if (!SymbolTable.variables.ContainsKey(varToken.TokenText))
             {
-                ExceptionController.AddException("Cannot inquire on undefined variable '" + varToken + "'.", varToken.StartIndex, varToken.EndIndex, 'V');
+                ErrorController.AddError("Cannot inquire on undefined variable '" + varToken + "'.", varToken.StartIndex, varToken.EndIndex, ErrorSource.Validator);
                 return inquiryIndex;
             }
 
@@ -248,13 +249,13 @@ namespace QuickCalculator.Evaluation
         {
             if (StartIndex != 0)
             {
-                ExceptionController.AddException("Command must be at the beginning of the input.", commandToken.StartIndex, commandToken.EndIndex, 'V');
+                ErrorController.AddError("Command must be at the beginning of the input.", commandToken.StartIndex, commandToken.EndIndex, ErrorSource.Validator);
                 return;
             }
 
             if (!SymbolTable.commands.ContainsKey(commandToken.TokenText))
             {
-                ExceptionController.AddException("Unknown command '" + commandToken + "'.", commandToken.StartIndex, commandToken.EndIndex, 'V');
+                ErrorController.AddError("Unknown command '" + commandToken + "'.", commandToken.StartIndex, commandToken.EndIndex, ErrorSource.Validator);
                 return;
             }
 
@@ -262,8 +263,8 @@ namespace QuickCalculator.Evaluation
 
             if (tokens.Count - 1 != command.NumParameters())
             {
-                ExceptionController.AddException("Command '" + commandToken + "' requires " + command.NumParameters() + " arguments, received "
-                                                    + (tokens.Count - 1) + ".", commandToken.StartIndex, commandToken.EndIndex, 'V');
+                ErrorController.AddError("Command '" + commandToken + "' requires " + command.NumParameters() + " arguments, received "
+                                                    + (tokens.Count - 1) + ".", commandToken.StartIndex, commandToken.EndIndex, ErrorSource.Validator);
                 return;
             }
 
@@ -271,8 +272,8 @@ namespace QuickCalculator.Evaluation
             {
                 if (tokens[i + 1].category != command.GetParameter(i))
                 {
-                    ExceptionController.AddException("Argument '" + (i + 1) + "' for command " + commandToken + " should be a " + command.GetParameter(i) +
-                                                     " token, received " + tokens[i + 1].category + ".", tokens[i + 1].StartIndex, tokens[i + 1].EndIndex, 'V');
+                    ErrorController.AddError("Argument '" + (i + 1) + "' for command " + commandToken + " should be a " + command.GetParameter(i) +
+                                                     " token, received " + tokens[i + 1].category + ".", tokens[i + 1].StartIndex, tokens[i + 1].EndIndex, ErrorSource.Validator);
                 }
             }
         }

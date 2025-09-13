@@ -1,4 +1,5 @@
 ﻿using System.Text;
+using QuickCalculator.Errors;
 using QuickCalculator.Tokens;
 
 namespace QuickCalculator.Evaluation
@@ -176,7 +177,7 @@ namespace QuickCalculator.Evaluation
             else
             {
                 // Any other character is invalid for the start of a token
-                ExceptionController.AddException("Invalid character '" + current + "' for start of token.", currentIndex, currentIndex + 1, 'T');
+                ErrorController.AddError("Invalid character '" + current + "' for start of token.", currentIndex, currentIndex + 1, ErrorSource.Tokenizer);
             }
             return true;
         }
@@ -201,7 +202,7 @@ namespace QuickCalculator.Evaluation
             {
                 if (hasDecimal)
                 {
-                    ExceptionController.AddException("Number contains multiple decimal points.", currentIndex, currentIndex + 1, 'T');
+                    ErrorController.AddError("Number contains multiple decimal points.", currentIndex, currentIndex + 1, ErrorSource.Tokenizer);
                 }
                 else
                 {
@@ -307,7 +308,7 @@ namespace QuickCalculator.Evaluation
                 category = TokenCategory.OpenBracket;
                 if (tokens.Count == 0 || tokens[tokens.Count - 1].category != TokenCategory.Function)
                 {   // Brackets can only occur after a function token
-                    ExceptionController.AddException("TokenCategory.OpenBracket must immediately follow a function name.", currentIndex, currentIndex + 1, 'T');
+                    ErrorController.AddError("TokenCategory.OpenBracket must immediately follow a function name.", currentIndex, currentIndex + 1, ErrorSource.Tokenizer);
                     functionLevel = 0; // Avoid letting functionLevel be negative when the token is added, which would cause errors elsewhere
                 }
                 addToken = new LevelToken(token.ToString(), category, tokenStart, currentIndex + 1, functionLevel);
@@ -318,7 +319,7 @@ namespace QuickCalculator.Evaluation
                 category = TokenCategory.CloseBracket;
                 if (functionLevel == -1)
                 {
-                    ExceptionController.AddException("Unmatched closing bracket.", currentIndex, currentIndex + 1, 'T');
+                    ErrorController.AddError("Unmatched closing bracket.", currentIndex, currentIndex + 1, ErrorSource.Tokenizer);
                     functionLevel = 0;  /* To avoid a negative functionLevel, which could cause errors elsewhere
                                          *  (namely when we attempt to color the token, which doesn't matter since it
                                          *  will be red due to the exception anyway) */

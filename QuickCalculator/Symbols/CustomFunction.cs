@@ -1,4 +1,5 @@
 ﻿using System.Text;
+using QuickCalculator.Errors;
 using QuickCalculator.Evaluation;
 using QuickCalculator.Tokens;
 
@@ -110,14 +111,14 @@ namespace QuickCalculator.Symbols
         {
             if (Tokens == null)
             {
-                ExceptionController.AddException("Custom Function '" + Name + "' not given definition Tokens.", 0, 0, 'F');
+                ErrorController.AddError("Custom Function '" + Name + "' not given definition Tokens.", 0, 0, ErrorSource.Function);
                 return;
             }
 
             if (args.Count != parameters.Count)
             {
-                ExceptionController.AddException("Custom Function '" + Name + "' expected " + parameters.Count +
-                                        " arguments, received " + args.Count, 0, 0, 'F');
+                ErrorController.AddError("Custom Function '" + Name + "' expected " + parameters.Count +
+                                        " arguments, received " + args.Count, 0, 0, ErrorSource.Function);
                 return;
             }
 

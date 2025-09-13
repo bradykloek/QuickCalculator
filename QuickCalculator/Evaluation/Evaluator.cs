@@ -1,4 +1,5 @@
 ﻿using System.Text;
+using QuickCalculator.Errors;
 using QuickCalculator.Symbols;
 using QuickCalculator.Tokens;
 
@@ -18,7 +19,7 @@ namespace QuickCalculator.Evaluation
         {
             this.ExecuteInput = ExecuteInput;
             this.roundPrecision = roundPrecision;
-            ExceptionController.ClearExceptions();
+            ErrorController.ClearErrors();
         }
 
         public void Evaluate(string input)
@@ -29,7 +30,7 @@ namespace QuickCalculator.Evaluation
             Validator v = new Validator(Tokens);
             v.Validate();
 
-            if (ExceptionController.Count() != 0) return;
+            if (ErrorController.Count() != 0) return;
 
             if (Tokens.Count > 0 && Tokens[0].category == TokenCategory.Command)
             {

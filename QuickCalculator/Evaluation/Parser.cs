@@ -1,4 +1,5 @@
 ﻿using System.Text;
+using QuickCalculator.Errors;
 using QuickCalculator.Symbols;
 using QuickCalculator.Tokens;
 
@@ -118,7 +119,7 @@ namespace QuickCalculator.Evaluation
             {
                 // If we have gone out of bounds of the Token List, there was an operator at the end of the string which thus didn't have enough operands
                 Token prevToken = tokens[currentIndex - 1];
-                ExceptionController.AddException("Input ends with operator '" + prevToken.TokenText + "', which does not have enough operands.", prevToken.StartIndex, prevToken.EndIndex, 'P');
+                ErrorController.AddError("Input ends with operator '" + prevToken.TokenText + "', which does not have enough operands.", prevToken.StartIndex, prevToken.EndIndex, ErrorSource.Parser);
                 return 1;
             }
             Token token = tokens[currentIndex];
@@ -145,7 +146,7 @@ namespace QuickCalculator.Evaluation
                     }
                     else
                     {
-                        ExceptionController.AddException("Undefined variable '" + token.TokenText + "'.", token.StartIndex, token.EndIndex, 'P');
+                        ErrorController.AddError("Undefined variable '" + token.TokenText + "'.", token.StartIndex, token.EndIndex, ErrorSource.Parser);
                     }
                     currentIndex++;
                     break;
@@ -162,7 +163,7 @@ namespace QuickCalculator.Evaluation
                     break;
                 default:
                     // If the switch falls to the default, there was a token we didn't account for.
-                    ExceptionController.AddException("Encountered an unexpected token '" + token.TokenText + "'.", token.StartIndex, token.EndIndex, 'P');
+                    ErrorController.AddError("Encountered an unexpected token '" + token.TokenText + "'.", token.StartIndex, token.EndIndex, ErrorSource.Parser);
                     break;
             }
             return value;
@@ -178,7 +179,7 @@ namespace QuickCalculator.Evaluation
 
             if (!SymbolTable.functions.ContainsKey(functionToken.TokenText))
             {   // functionToken is not in the functions hash table
-                ExceptionController.AddException("Undefined function '" + functionToken.TokenText + "'.", functionToken.StartIndex, functionToken.EndIndex, 'P');
+                ErrorController.AddError("Undefined function '" + functionToken.TokenText + "'.", functionToken.StartIndex, functionToken.EndIndex, ErrorSource.Parser);
                 return 0;
             }
 
@@ -188,13 +189,13 @@ namespace QuickCalculator.Evaluation
 
             if (arguments.Count != function.NumParameters())
             {
-                ExceptionController.AddException("Function '" + functionToken + "' requires " +
+                ErrorController.AddError("Function '" + functionToken + "' requires " +
                                         function.NumParameters() + " arguments, received " + arguments.Count + ".",
-                                        functionToken.StartIndex, functionToken.EndIndex, 'P');
+                                        functionToken.StartIndex, functionToken.EndIndex, ErrorSource.Parser);
             }
 
-            if (executeFunctions && ExceptionController.Count() == 0)
-            {   // Only execute the function if this Evaluator is set to execute functions and there have been no Exceptions
+            if (executeFunctions && ErrorController.Count() == 0)
+            {   // Only execute the function if this Evaluator is set to execute functions and there have been no Errors
                 return function.Execute(arguments);
             }
             else
@@ -240,7 +241,7 @@ namespace QuickCalculator.Evaluation
 
             if (currentIndex >= tokens.Count)
             {   // If the loop didn't find a TokenCategory.CloseBracket, there is an unmatched open bracket
-                ExceptionController.AddException("Unmatched open bracket.", currentIndex - 1, currentIndex - 1, 'P');
+                ErrorController.AddError("Unmatched open bracket.", currentIndex - 1, currentIndex - 1, ErrorSource.Parser);
             }
 
             if (argumentTokens.Count > 0)
@@ -263,14 +264,14 @@ namespace QuickCalculator.Evaluation
 
             if (!SymbolTable.functions.ContainsKey(token.TokenText))
             {
-                ExceptionController.AddException("Cannot inquire on undefined function '" + token + "'.",
-                                                    token.StartIndex, token.EndIndex, 'P');
+                ErrorController.AddError("Cannot inquire on undefined function '" + token + "'.",
+                                                    token.StartIndex, token.EndIndex, ErrorSource.Parser);
                 return;
             }
             if(SymbolTable.functions[token.TokenText] is PrimitiveFunction)
             {
-                ExceptionController.AddException("Cannot inquire on primitive function '" + token + "'. Inquiry can only be " +
-                                                    "done to custom functions and variables.", token.StartIndex, token.EndIndex, 'P');
+                ErrorController.AddError("Cannot inquire on primitive function '" + token + "'. Inquiry can only be " +
+                                                    "done to custom functions and variables.", token.StartIndex, token.EndIndex, ErrorSource.Parser);
                 return;
             }
 
@@ -283,8 +284,8 @@ namespace QuickCalculator.Evaluation
 
             if(arguments.Count != 0 && arguments.Count != customFunction.NumParameters())
             {
-                ExceptionController.AddException("A function call can only be inquired if it has no arguments or the exact number of arguments " +
-                    "the function requires. '" +  token + "' requires " + customFunction.NumParameters + " arguments.", token.StartIndex, token.EndIndex, 'P');
+                ErrorController.AddError("A function call can only be inquired if it has no arguments or the exact number of arguments " +
+                    "the function requires. '" +  token + "' requires " + customFunction.NumParameters + " arguments.", token.StartIndex, token.EndIndex, ErrorSource.Parser);
             }
 
             if (executeFunctions)

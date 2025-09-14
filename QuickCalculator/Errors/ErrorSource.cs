@@ -6,6 +6,7 @@
         Validator,
         Parser,
         Function,
-        Transformer
+        Transformer,
+        Inquirer
     }
 }

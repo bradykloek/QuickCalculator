@@ -147,14 +147,14 @@ namespace QuickCalculator
             )},
         };
 
-        private Dictionary<string, double> localVariables;
+        private Dictionary<string, object> localVariables;
 
         public SymbolTable()
         {
-            localVariables = new Dictionary<string, double>();
+            localVariables = new Dictionary<string, object>();
         }
 
-        public void AddLocal(string variable, double value)
+        public void AddLocal(string variable, object value)
         {
             localVariables[variable] = value;
         }
@@ -164,9 +164,9 @@ namespace QuickCalculator
             return localVariables.ContainsKey(key);
         }
 
-        public double GetLocal(string variable)
+        public object GetLocal(string variable)
         {
-            return (double)localVariables[variable];
+            return localVariables[variable];
         }
     }
 }

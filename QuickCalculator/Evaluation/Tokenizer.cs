@@ -9,6 +9,7 @@ namespace QuickCalculator.Evaluation
         private string input;                       // The raw string input
         private List<Token> tokens;                 // Stores the tokens that get created
 
+        public bool IncludesInquiry { get; private set; } = false;  // This stores whether an inquiry (using the '?' operator) is in the input.
 
         private static HashSet<char> operators = new HashSet<char>{ '+', '-', '*', '/', '^', '%', '!'};
 
@@ -167,6 +168,7 @@ namespace QuickCalculator.Evaluation
             else if (current == '?')
             {
                 category = TokenCategory.Inquiry;
+                IncludesInquiry = true;
             }
             else if (current == '>')
             {
@@ -233,12 +235,6 @@ namespace QuickCalculator.Evaluation
                 return false;
             }
 
-            if (current == '[')
-            {
-                // If we encounter a [, this indicates this variable is actually a function
-                addToken = new FunctionToken(token.ToString(), TokenCategory.Function, tokenStart, currentIndex, ++functionLevel);
-            }
-
             /*  The current token ends and we will start a new one.
              *  We must move the counter back so the loop will check the current character again */
             currentIndex--;
@@ -256,7 +252,7 @@ namespace QuickCalculator.Evaluation
             /* Before checking the other operators, we first must handle a special case for '-' 
              * to check if it should be the unary negation operator instead of subtraction.     */
             if (current == '-') {
-                TokenCategory prevCategory = tokens.Count > 0 ? tokens[tokens.Count - 1].category : TokenCategory.Uncategorized;
+                TokenCategory prevCategory = tokens.Count > 0 ? tokens[tokens.Count - 1].Category : TokenCategory.Uncategorized;
                 switch (prevCategory)
                 {
                     case TokenCategory.Uncategorized:
@@ -306,13 +302,17 @@ namespace QuickCalculator.Evaluation
             if (current == '[')
             {
                 category = TokenCategory.OpenBracket;
-                if (tokens.Count == 0 || tokens[tokens.Count - 1].category != TokenCategory.Function)
+
+                if (tokens.Count == 0 || tokens[tokens.Count - 1].Category != TokenCategory.Variable)
                 {   // Brackets can only occur after a function token
                     ErrorController.AddError("TokenCategory.OpenBracket must immediately follow a function name.", currentIndex, currentIndex + 1, ErrorSource.Tokenizer);
                     functionLevel = 0; // Avoid letting functionLevel be negative when the token is added, which would cause errors elsewhere
                 }
+
+                // If the previous token was a variable, it should actually be tokenized as a function
+                Token varToken = tokens[tokens.Count - 1];
+                tokens[tokens.Count - 1] = new FunctionToken(varToken.TokenText, TokenCategory.Function, varToken.StartIndex, varToken.EndIndex, ++functionLevel);
                 addToken = new LevelToken(token.ToString(), category, tokenStart, currentIndex + 1, functionLevel);
-                // Don't increment functionLevel here because the intial function token 
             }
             else
             {
@@ -350,7 +350,7 @@ namespace QuickCalculator.Evaluation
                     case TokenCategory.Variable:
                     case TokenCategory.Function:
                     case TokenCategory.OpenParen:
-                        TokenCategory prevCategory = tokens[tokens.Count - 1].category;
+                        TokenCategory prevCategory = tokens[tokens.Count - 1].Category;
                         switch (prevCategory)
                         {
                             case TokenCategory.Number:

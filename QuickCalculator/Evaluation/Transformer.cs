@@ -27,7 +27,7 @@ namespace QuickCalculator.Evaluation
             for (int i = 0; i < tokens.Count; i++)
             {
                 Token token = tokens[i];
-                switch (token.category)
+                switch (token.Category)
                 {
                     case TokenCategory.Assignment:
                         if (assignmentIndex != -1)
@@ -40,11 +40,11 @@ namespace QuickCalculator.Evaluation
                         break;
                     case TokenCategory.Inquiry:
                         IncludesInquiry = true;
-                        if (i >= 1 && tokens[i - 1].category == TokenCategory.Variable)
+                        if (i >= 1 && tokens[i - 1].Category == TokenCategory.Variable)
                         {
                             i = InquireVariable(i);
                         }
-                        else if (i >= 3 && tokens[i - 1].category == TokenCategory.CloseBracket)
+                        else if (i >= 3 && tokens[i - 1].Category == TokenCategory.CloseBracket)
                         {
                             // completedInquiry is not set to true because function inquiries need to be completed in the parser
                             InquireFunction(i);
@@ -67,6 +67,7 @@ namespace QuickCalculator.Evaluation
         private void PrepareAssignment(int assignmentIndex)
         {
             int variableIdx;
+            tokens[assignmentIndex].Skip = true;
 
             if (assignmentIndex == 0 || assignmentIndex == tokens.Count - 1)
             {   // Assignment operator is the first or last token
@@ -86,7 +87,7 @@ namespace QuickCalculator.Evaluation
             Token prevToken = tokens[assignmentIndex - 1];
             Token nextToken = tokens[assignmentIndex + 1];
 
-            if (prevToken.category == TokenCategory.Variable && nextToken.category == TokenCategory.Variable) // If both are variables
+            if (prevToken.Category == TokenCategory.Variable && nextToken.Category == TokenCategory.Variable) // If both are variables
             {
                 if (SymbolTable.variables.ContainsKey(nextToken.TokenText))
                 {   // So long as next is defined, we assign prev <= next (leftward assignment by default)
@@ -105,11 +106,11 @@ namespace QuickCalculator.Evaluation
             }
             else
             {
-                if (prevToken.category == TokenCategory.Variable)
+                if (prevToken.Category == TokenCategory.Variable)
                 {   // prev is the token that will receive the assignment
                     variableIdx = assignmentIndex - 1;
                 }
-                else if (nextToken.category == TokenCategory.Variable)
+                else if (nextToken.Category == TokenCategory.Variable)
                 {   // next is the token that will receive the assignment
                     variableIdx = assignmentIndex + 1;
                 }
@@ -126,8 +127,9 @@ namespace QuickCalculator.Evaluation
 
             string variableName = tokens[variableIdx].TokenText;
 
-            // Remove the variable and the assignment operator
-            tokens.RemoveRange(Math.Min(assignmentIndex, variableIdx), 2);
+            // Mark the variable token and assignment operator to not be parsed
+            tokens[variableIdx].Skip = true;
+
 
             AssignVariable = variableName;
         }
@@ -137,8 +139,8 @@ namespace QuickCalculator.Evaluation
         {
             List<Token> parameters = new List<Token>();
 
-            if (assignmentIndex < 3 || tokens[0].category != TokenCategory.Function ||
-                tokens[1].category != TokenCategory.OpenBracket || tokens[assignmentIndex - 1].category != TokenCategory.CloseBracket)
+            if (assignmentIndex < 3 || tokens[0].Category != TokenCategory.Function ||
+                tokens[1].Category != TokenCategory.OpenBracket || tokens[assignmentIndex - 1].Category != TokenCategory.CloseBracket)
             {   // There must be at least three tokens before the assignment: TokenCategory.Function TokenCategory.OpenBracket TokenCategory.CloseBracket. Otherwise don't interpret this as a user function
                 return false;
             }
@@ -152,16 +154,19 @@ namespace QuickCalculator.Evaluation
                 return false;
             }
 
+            tokens[0].Skip = true;
+            tokens[1].Skip = true;
             int index = 2;  // Start at index 2 to skip over the function and [
             int parameterCount = 0;
             for(; index < tokens.Count - 1; index++)
             {
-                if (tokens[index].category == TokenCategory.CloseBracket && functionToken.Level == ((LevelToken)tokens[index]).Level)
+                Token token = tokens[index];
+                token.Skip = true;
+                if (token.Category == TokenCategory.CloseBracket && functionToken.Level == ((LevelToken)token).Level)
                 {   // Break the loop when we find the ] that terminates this function token
                     break;
                 }
-                Token token = tokens[index];
-                switch (token.category)
+                switch (token.Category)
                 {
                     case TokenCategory.Variable:
                         // If it is a variable, add it to the local variables so when we parse the function definition we see that the parameters are defined
@@ -176,9 +181,6 @@ namespace QuickCalculator.Evaluation
                         return false;
                 }
             }
-
-            tokens.RemoveRange(0, index + 2);   // Remove the tokens from the function up to (including) the assignment operator
-
             DefineFunction = new CustomFunction(functionToken.TokenText, parameters);
             return true;
         }
@@ -212,7 +214,7 @@ namespace QuickCalculator.Evaluation
             int i;
             for (i = inquiryIndex - 2; i >= 0; i--)
             {
-                if (tokens[i].category == TokenCategory.Function && ((FunctionToken)tokens[i]).Level == closedBracket.Level)
+                if (tokens[i].Category == TokenCategory.Function && ((FunctionToken)tokens[i]).Level == closedBracket.Level)
                 {   // Searches for the function token that matches this closed bracket
                     break;
                 }

@@ -32,8 +32,9 @@ namespace QuickCalculator.Evaluation
         {
             this.localVariables = localVariables;
             this.tokens = tokens;
-            currentIndex = 0;
             this.executeFunctions = executeFunctions;
+            currentIndex = -1;
+            NextToken();
         }
 
         public Parser(List<Token> tokens, bool executeFunctions) 
@@ -44,10 +45,19 @@ namespace QuickCalculator.Evaluation
         /// </summary>
         /// <param name="matchWith"></param> The string we are comparing against the current token
         /// <returns></returns>
-        public bool MatchToken(string matchWith)
+        private bool MatchToken(string matchWith)
         {
             if (currentIndex >= tokens.Count) return false;
             return tokens[currentIndex].TokenText.Equals(matchWith);
+        }
+
+        private void NextToken()
+        {
+            currentIndex++;
+            while (currentIndex < tokens.Count && tokens[currentIndex].Skip)
+            {
+                currentIndex++;
+            }
         }
 
         public double ParseExpression()
@@ -57,7 +67,7 @@ namespace QuickCalculator.Evaluation
             while (MatchToken("+") || MatchToken("-"))
             {
                 string op = tokens[currentIndex].TokenText;
-                currentIndex++; // Move past operator
+                NextToken(); // Move past operator
                 double right = ParseTerm();
                 left = op.Equals("+") ? left + right : left - right;
             }
@@ -70,7 +80,7 @@ namespace QuickCalculator.Evaluation
             while (MatchToken("*") || MatchToken("/") || MatchToken("%") || MatchToken("//"))
             {
                 string op = tokens[currentIndex].TokenText;
-                currentIndex++; // Move past operator
+                NextToken(); // Move past operator
                 double right = ParseFactor();
                 switch (op)
                 {
@@ -97,7 +107,7 @@ namespace QuickCalculator.Evaluation
             while (MatchToken("^") || MatchToken("!"))
             {
                 string op = tokens[currentIndex].TokenText;
-                currentIndex++; // Move past operator
+                NextToken(); // Move past operator
                 switch (op)
                 {
                     case "^":
@@ -124,22 +134,22 @@ namespace QuickCalculator.Evaluation
             }
             Token token = tokens[currentIndex];
             double value = 0;
-            switch (token.category)
+            switch (token.Category)
             {
                 case TokenCategory.Number:
                     value = double.Parse(tokens[currentIndex].TokenText);
-                    currentIndex++;
+                    NextToken();
                     break;
                 case TokenCategory.OpenParen:
-                    currentIndex++;     // Skip ( token
+                    NextToken();     // Skip ( token
                     value = ParseExpression();
-                    currentIndex++;     // Skip ) token
+                    NextToken();     // Skip ) token
                     break;
                 case TokenCategory.Variable:
                 case TokenCategory.Parameter:
                     if (localVariables.LocalsContains(token.TokenText))
                     {   // Check if this variable is defined locally, since local variables should overshadow globals
-                        value = localVariables.GetLocal(token.TokenText);
+                        value = Convert.ToDouble(localVariables.GetLocal(token.TokenText));
                     }
                     else if (SymbolTable.variables.ContainsKey(token.TokenText))
                     {
@@ -149,18 +159,15 @@ namespace QuickCalculator.Evaluation
                     {
                         ErrorController.AddError("Undefined variable '" + token.TokenText + "'.", token.StartIndex, token.EndIndex, ErrorSource.Parser);
                     }
-                    currentIndex++;
+                    NextToken();
                     break;
                 case TokenCategory.Function:
                     value = ParseFunction();
                     break;
                 case TokenCategory.Negation:
                     // Unary negation
-                    currentIndex++;     // Skip '-' token
+                    NextToken();     // Skip '-' token
                     value = -1 * ParsePrimary();
-                    break;
-                case TokenCategory.Inquiry:
-                    InquireFunction();
                     break;
                 default:
                     // If the switch falls to the default, there was a token we didn't account for.
@@ -222,22 +229,23 @@ namespace QuickCalculator.Evaluation
             List<Token> argumentTokens = new List<Token>();
             while (currentIndex < tokens.Count)
             {   // End loop if we find a closing bracket of the same level as the function we are parsing
-                if (tokens[currentIndex].category == TokenCategory.CloseBracket && ((LevelToken)tokens[currentIndex]).Level == functionToken.Level) break;
+                if (tokens[currentIndex].Category == TokenCategory.CloseBracket && ((LevelToken)tokens[currentIndex]).Level == functionToken.Level)
+                    break;
 
-                if (tokens[currentIndex].category == TokenCategory.Comma && ((LevelToken)tokens[currentIndex]).Level == functionToken.Level)
+                if (tokens[currentIndex].Category == TokenCategory.Comma && ((LevelToken)tokens[currentIndex]).Level == functionToken.Level)
                 {   // If we find a ',' of the same level as the current function, parse the tokens of the argument and add the resulting double to the functionToken's arguments list
 
                     Parser parseArg = new Parser(argumentTokens, executeFunctions, localVariables);
                     // Parse this argument. Any errors will be added to the same evaluator
 
                     arguments.Add(parseArg.ParseExpression());
-                    argumentTokens = new List<Token>();
+                    argumentTokens.Clear();
                 }
                 else
-                {   // Any token other than ',' comprises the argument, so add it to the argumentstokens list
+                {   // Any token other than ',' comprises the argument, so add it to the argumentsTokens list
                     argumentTokens.Add(tokens[currentIndex]);
                 }
-                currentIndex++;
+                NextToken();
             }
 
             if (currentIndex >= tokens.Count)
@@ -252,52 +260,6 @@ namespace QuickCalculator.Evaluation
             }
 
             return arguments;
-        }
-
-        /// <summary>
-        /// Replaces an inquired function token with its Source tokens, with any parameters replaced with the associated
-        /// parsed argument values.
-        /// </summary>
-        private void InquireFunction()
-        {
-            tokens.RemoveAt(currentIndex);  // Remove '?' token
-            Token token = tokens[currentIndex];
-
-            if (!SymbolTable.functions.ContainsKey(token.TokenText))
-            {
-                ErrorController.AddError("Cannot inquire on undefined function '" + token + "'.",
-                                                    token.StartIndex, token.EndIndex, ErrorSource.Parser);
-                return;
-            }
-            if(SymbolTable.functions[token.TokenText] is PrimitiveFunction)
-            {
-                ErrorController.AddError("Cannot inquire on primitive function '" + token + "'. Inquiry can only be " +
-                                                    "done to custom functions and variables.", token.StartIndex, token.EndIndex, ErrorSource.Parser);
-                return;
-            }
-
-            CustomFunction customFunction = (CustomFunction)SymbolTable.functions[token.TokenText];
-            
-            int functionStartIndex = currentIndex;
-
-            List<double> arguments = ParseArguments();
-            // ParseArguments will move currentIndex past the TokenCategory.CloseBracket that ends this function
-
-            if(arguments.Count != 0 && arguments.Count != customFunction.NumParameters())
-            {
-                ErrorController.AddError("A function call can only be inquired if it has no arguments or the exact number of arguments " +
-                    "the function requires. '" +  token + "' requires " + customFunction.NumParameters + " arguments.", token.StartIndex, token.EndIndex, ErrorSource.Parser);
-            }
-
-            if (executeFunctions)
-            {
-                List<Token> inquirytokens = customFunction.Inquire(arguments);
-                tokens.RemoveRange(functionStartIndex, currentIndex - functionStartIndex + 1);  // Remove the function tokens from the function to the TokenCategory.CloseBracket
-                tokens.Insert(functionStartIndex, new Token("(", TokenCategory.OpenParen, 0, 0));   // Add TokenCategory.OpenParen token
-                tokens.InsertRange(functionStartIndex + 1, inquirytokens);  // Add the inquiry tokens
-                currentIndex = functionStartIndex + inquirytokens.Count + 1;  // Move currentIndex past the TokenCategory.OpenParen and inquirytokens
-                tokens.Insert(currentIndex, new Token(")", TokenCategory.CloseParen, 0, 0));   // Add TokenCategory.CloseParen token
-            }
         }
 
         public override string ToString()

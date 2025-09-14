@@ -27,25 +27,31 @@ namespace QuickCalculator.Evaluation
             Tokenizer tokenizer = new Tokenizer(input);
             Tokens = tokenizer.Tokenize();
 
+            if (ExecuteInput)
+            {
+                if (Tokens.Count > 0 && Tokens[0].Category == TokenCategory.Command)
+                {
+                    ExecuteCommand();
+                    return;
+                }
+                if (tokenizer.IncludesInquiry)
+                {
+                    Inquirer inquirer = new Inquirer(Tokens);
+                    inquirer.Inquire();
+                    ResultString = TokenString();
+                    return;
+                }
+            }
+
             Validator validator = new Validator(Tokens);
             validator.Validate();
 
-            Transformer transformer = new Transformer(Tokens);
-            transformer.Transform();
-
             if (ErrorController.Count() != 0) return;
 
-            if (Tokens.Count > 0 && Tokens[0].category == TokenCategory.Command)
+            if (validator.DefineFunction != null && ExecuteInput)
             {
-                if(ExecuteInput)
-                    ExecuteCommand();
-                return;
-            }
-
-            if (transformer.DefineFunction != null)
-            {
-                DefineCustomFunction(transformer.DefineFunction);
-                ResultString = "Function '" + transformer.DefineFunction.Name + "' Defined";
+                DefineCustomFunction(validator.DefineFunction);
+                ResultString = "Function '" + validator.DefineFunction.Name + "' Defined";
                 TemporaryResult = true;
                 return;
             }
@@ -55,14 +61,12 @@ namespace QuickCalculator.Evaluation
             if (ExecuteInput)
             {
                 SymbolTable.SetAns(result);
-                if (transformer.AssignVariable != "")
+                if (validator.AssignVariable != "")
                 {
-                    PerformAssignment(transformer.AssignVariable);
-                    ResultString = transformer.AssignVariable + " = " + result;
+                    PerformAssignment(validator.AssignVariable);
+                    ResultString = validator.AssignVariable + " = " + result;
                     TemporaryResult = true;
                 }
-
-                if(transformer.IncludesInquiry) ResultString = TokenString();
             }
   
         }
@@ -107,7 +111,13 @@ namespace QuickCalculator.Evaluation
         }
         public string TokenString()
         {
-            return string.Join(" ", Tokens);
+            StringBuilder sb = new StringBuilder();
+            for(int i = 0; i < Tokens.Count; i++)
+            {
+                if (!Tokens[i].Skip)
+                    sb.Append(Tokens[i].TokenText + " ");
+            }
+            return sb.ToString();
         }
     }
 }

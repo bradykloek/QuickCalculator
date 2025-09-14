@@ -18,5 +18,10 @@ namespace QuickCalculator.Symbols
             this.value = value;
             Tokens = new List<Token> { new Token(value.ToString(), TokenCategory.Number, 0, 0) };
         }
+
+        public string InquiryString()
+        {
+            return "( " + string.Join(" ", Tokens) + " )";
+        }
     }
 }

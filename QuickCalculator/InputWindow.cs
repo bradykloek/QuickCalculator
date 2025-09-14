@@ -161,7 +161,7 @@ using QuickCalculator.Evaluation;
                 {
                     int tokenStart = Tokens[i].StartIndex;
                     int tokenLength = Tokens[i].EndIndex - tokenStart;
-                    switch (Tokens[i].category)
+                    switch (Tokens[i].Category)
                     {
                         case TokenCategory.OpenParen:
                         case TokenCategory.CloseParen:
